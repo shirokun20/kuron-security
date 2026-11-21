@@ -1,6 +1,8 @@
 ---
 name: kuron-security
-description: Use when the user asks to scan, audit or check code with Claude Security (codebase scan, scan changes, or suggest patches) but the Claude Code Workflow tool is unavailable. Runs the Kuron Security adaptation: parallel researcher plus three-lens verifier panel via subagents, reusing the official plugin prompts, severity rules and report shape, with honestly-labeled kuron-panel verification and SARIF plus JSONL products.
+description: "Use when the user asks to scan, audit or check code with Claude Security (codebase scan, scan changes, or suggest patches) but the Claude Code Workflow tool is unavailable. Runs the Kuron Security adaptation - parallel researcher plus three-lens verifier panel via subagents, reusing the official plugin prompts, severity rules and report shape, with honestly-labeled kuron-panel verification and SARIF plus JSONL products."
+metadata:
+  version: 1.0.0
 ---
 
 # Kuron Security (Claude Security adapter for omp)
