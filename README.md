@@ -100,47 +100,59 @@ flowchart TD
 
 ## What You Get (Visual Output Preview)
 
-### 1. Terminal & Chat Scorecards
+### 1. Alignment-Safe Open-Rail CLI Scorecards
 
-Every scan and patch run prints an instant high-contrast scorecard box:
+Every scan and patch run prints a modern open-rail scorecard (`╭─`, `│`, `├─`, `╰─`) — zero ragged right borders across different monospace fonts and zero truncated file paths:
 
 ```text
-╔════════════════════════════════════════════════════════════════════════╗
-║ 🛡️  KURON SECURITY — SCAN SCORECARD                                    ║
-╠════════════════════════════════════════════════════════════════════════╣
-║ Mode: scan     │ Effort: low    │ Commit: b977b4e5736d │ Stamp: kuron-panel ║
-║ Total: 3       │ 🔴 CRIT: 0   🟠 HIGH: 0   🟡 MED: 1   🔵 LOW: 2      ║
-╟────────────────────────────────────────────────────────────────────────╢
-║ 🔴 CRITICAL [░░░░░░░░░░░░░░░░░░░░░░░░] 0                               ║
-║ 🟠 HIGH     [░░░░░░░░░░░░░░░░░░░░░░░░] 0                               ║
-║ 🟡 MEDIUM   [████████░░░░░░░░░░░░░░░░] 1                               ║
-║ 🔵 LOW      [████████████████░░░░░░░░] 2                               ║
-╠════════════════════════════════════════════════════════════════════════╣
-║ 🟡 F1  [MEDIUM  │3/3✓] CWE-20   lib/core/config/remote_config_service.dart:455 ║
-║ 🔵 F2  [LOW     │3/3✓] CWE-409  lib/core/services/source_installer_service.dar ║
-║ 🔵 F3  [LOW     │3/3✓] CWE-400  lib/core/services/source_installer_service.dar ║
-╠════════════════════════════════════════════════════════════════════════╣
-║ 📦 Report : KURON-SECURITY-RESULTS.md  │  SARIF + JSONL + Stamp ready  ║
-╚════════════════════════════════════════════════════════════════════════╝
+╭─ 🛡️  KURON SECURITY · SCAN SCORECARD ──────────────────────────────
+│  Mode     : scan (low effort)
+│  Scope    : lib/core/config/remote_config_service.dart, lib/core/services/source_installer_service.dart
+│  Revision : b977b4e5736d · Stamp: kuron-panel
+│  Summary  : 3 kept (CRITICAL 0 · HIGH 0 · MEDIUM 1 · LOW 2)
+├─ Severity Breakdown ───────────────────────────────────────────────
+│  CRITICAL : ░░░░░░░░░░░░░░░░░░░░  0
+│  HIGH     : ░░░░░░░░░░░░░░░░░░░░  0
+│  MEDIUM   : ███████░░░░░░░░░░░░░  1
+│  LOW      : █████████████░░░░░░░  2
+├─ Kept Findings (3) ────────────────────────────────────────────────
+│  [MEDIUM]  F1 · CWE-20 · 3/3✓ (R:✓ I:✓ D:✓)
+│            Reserved config identifiers ('app', 'tags') not blocked during source config installation
+│            └─ lib/core/config/remote_config_service.dart:455
+│
+│  [LOW]     F2 · CWE-409 · 3/3✓ (R:✓ I:✓ D:✓)
+│            Unbounded ZIP decompression (zip bomb) in source package inspection and extraction
+│            └─ lib/core/services/source_installer_service.dart:469
+│
+│  [LOW]     F3 · CWE-400 · 3/3✓ (R:✓ I:✓ D:✓)
+│            Unbounded remote icon download and disk persistence in source installer
+│            └─ lib/core/services/source_installer_service.dart:958
+├─ Artifacts ────────────────────────────────────────────────────────
+│  Report   : KURON-SECURITY-RESULTS.md
+│  Machine  : KURON-SECURITY-RESULTS.sarif · .jsonl · KURON-SECURITY-REVISION-b977b4e5736d.json
+╰────────────────────────────────────────────────────────────────────
 ```
 
 ```text
-╔════════════════════════════════════════════════════════════════════════╗
-║ 🔧 KURON SECURITY — PATCH VERIFICATION SCORECARD                       ║
-╠════════════════════════════════════════════════════════════════════════╣
-║ Base: b977b4e5736d │ ✅ Written: 1 │ ⛔ Declined: 0 │ ⏭️  Skipped: 0    ║
-╟────────────────────────────────────────────────────────────────────────╢
-║ ✅ F1  [patch_written] try=1 [T:✓ NNV:✓ BU:✓] apply=clean              ║
-║    └─ git apply KURON-SECURITY-20261121-125051/patches/F1.patch        ║
-╚════════════════════════════════════════════════════════════════════════╝
+╭─ 🔧 KURON SECURITY · PATCH SCORECARD ──────────────────────────────
+│  Base     : b977b4e5736d · Written: 1 · Declined: 0 · Skipped: 0
+├─ Units (1) ────────────────────────────────────────────────────────
+│  [READY]    F1 · Reserved config identifiers ('app', 'tags') not blocked during source config installation
+│             Gate  : TARGETED ✓ │ NO_NEW_VULN ✓ │ BEHAVIOUR_UNCHANGED ✓ (attempts=1)
+│             Check : git apply --check (clean)
+│             Apply : git apply KURON-SECURITY-20261121-125051/patches/F1.patch
+╰────────────────────────────────────────────────────────────────────
 ```
 
-### 2. Visual Finding with Mermaid Attack Flow & Collapsible Panel Proof
+### 2. GitHub Security Advisory Card (`KURON-SECURITY-RESULTS.md` + `F1.patch`)
 
-Inside `KURON-SECURITY-RESULTS.md`, `MEDIUM+` findings include a **Source-to-Sink Mermaid graph** (verify the call chain in 5 seconds) and a **collapsible `<details>` 3-lens panel audit trail**:
+Each finding is presented as an instant-triage **Security Advisory Card** combining a 1-row metadata header, a **Source-to-Sink Mermaid graph**, a **syntax-highlighted `diff` preview**, and an expandable **3-Lens Panel Audit Table**:
 
-> [!WARNING]
-> **F1 — Reserved config identifiers (`'app'`, `'tags'`) not blocked during source config installation (`MEDIUM`, confidence `high`, `CWE-20`)**
+#### `F1` — Reserved config identifiers (`'app'`, `'tags'`) not blocked during source config installation
+
+| Severity | Confidence | Weakness | Sink (`file:line`) | Panel Verdict | Patch Status |
+|---|---|---|---|---|---|
+| 🟡 **`MEDIUM`** | **`HIGH`** | `CWE-20` (Improper Input Validation) | `remote_config_service.dart:455` | ✅ **`3/3 TRUE_POSITIVE`** (`kuron-panel`) | 🔧 **`F1.patch` ready** (`apply=clean`) |
 
 ```mermaid
 flowchart LR
@@ -150,17 +162,35 @@ flowchart LR
     mark -->|"Next App Startup"| sink["💥 _loadFromFile('app')<br/>remote_config_service.dart:645<br/>Overwrites global _appConfig"]
 ```
 
-- **Impact.** An untrusted source manifest or ZIP package claiming `"source": "app"` persistently overrides global `AppConfig` settings across restarts (including `storage.folders.backup` passed to `path.join` in `DownloadBloc`/`DownloadService`) while remaining invisible in the installed-sources UI.
-- **Where.** `lib/core/config/remote_config_service.dart:455` in `RemoteConfigService.markSourceInstalled` — `CWE-20`
-- **Fix.** Reject reserved and bundled identifiers (`'app'`, `'tags'`, `'nhentai'`) in `_validateSourceId` and at the entry of `applySourceConfigFromJson`, `markSourceInstalled`, and `registerSourceInRegistry`.
-- **Verification.** `3/3` lens verifiers confirmed (`kuron-panel`).
+> [!WARNING]
+> **Impact & Exploit Scenario:** An untrusted source manifest or ZIP package claiming `"source": "app"` writes `configs/app-config.json` and registers `'app'` in `installed_source_ids` (because `_bundledSourceIds` only checks `{'nhentai'}`). On the next startup, `_restoreInstalledSourcesFromCache` loads `app-config.json` into `_appConfig`, hijacking global settings including `storage.folders.backup` (passed to `path.join` in `DownloadBloc`/`DownloadService`) while remaining invisible in the installed-sources UI.
+
+```diff
+--- a/lib/core/config/remote_config_service.dart
++++ b/lib/core/config/remote_config_service.dart
+@@ -56,15 +56,22 @@ class RemoteConfigService {
+   static const Set<String> _bundledSourceIds = {'nhentai'};
++  static const Set<String> reservedConfigIds = {'app', 'tags', ..._bundledSourceIds};
++
++  static bool isReservedConfigId(String sourceId) =>
++      reservedConfigIds.contains(sourceId.trim().toLowerCase());
+ 
+   static void _validateSourceId(String sourceId) {
+-    if (!_sourceIdPattern.hasMatch(sourceId)) {
++    if (!_sourceIdPattern.hasMatch(sourceId) || isReservedConfigId(sourceId)) {
+       throw FormatException('Invalid sourceId: "$sourceId"');
+     }
+   }
+```
 
 <details>
-<summary>🔬 <b>View 3/3 Panel Audit Trail (REACHABILITY · IMPACT · DEFENSES)</b></summary>
+<summary>🔬 <b>3-Lens Adversarial Panel Audit Trail (3/3 Confirmed · Click to expand)</b></summary>
 
-- **REACHABILITY (`TRUE_POSITIVE`, `MEDIUM`)**: Confirmed path from `_installSourceFromLink` (`settings_source_install.dart:446`) / `_installSourceFromZip` (`line 560`) → `installCandidates` (`source_installer_service.dart:738`) → `applySourceConfigFromJson` (`remote_config_service.dart:394`) → `markSourceInstalled('app')` (`line 455`) → `_restoreInstalledSourcesFromCache` (`line 128`) → `_loadFromFile('app')` (`line 645`).
-- **IMPACT (`TRUE_POSITIVE`, `MEDIUM`)**: Overwriting `_appConfig` controls global `AppLimits`, `AppDurations`, and `AppStorage.backupFolderName` (`app_constants.dart:95-96`), which flows unvalidated into `path.join(baseDownloadPath, backupFolderName, ...)` (`download_bloc.dart:1223`, `download_service.dart:590`).
-- **DEFENSES (`TRUE_POSITIVE`, `MEDIUM`)**: Neither `_validateSourceId` (`remote_config_service.dart:66`) nor `SourceConfig.fromJson` (`config_models.g.dart:28`, which ignores unknown keys) blocks `'app'` or `'tags'`.
+| Lens | Verdict | Rated Severity | Decisive Code Evidence (`file:line`) |
+|---|---|---|---|
+| **1. `REACHABILITY`** | ✅ `TRUE_POSITIVE` | `MEDIUM` | `_installSourceFromLink` (`settings_source_install.dart:446`) / `_installSourceFromZip` (`line 560`) → `installCandidates` (`source_installer_service.dart:738`) → `applySourceConfigFromJson` (`remote_config_service.dart:394`) → `markSourceInstalled('app')` (`line 455`) → `_loadFromFile('app')` (`line 645`). |
+| **2. `IMPACT`** | ✅ `TRUE_POSITIVE` | `MEDIUM` | `_appConfig` controls global `AppLimits`, `AppDurations`, and `AppStorage.backupFolderName` (`app_constants.dart:95-96`), which flows unvalidated into `path.join(baseDownloadPath, backupFolderName, ...)` (`download_bloc.dart:1223`, `download_service.dart:590`). |
+| **3. `DEFENSES`** | ✅ `TRUE_POSITIVE` | `MEDIUM` | Neither `_validateSourceId` (`remote_config_service.dart:66`) nor `SourceConfig.fromJson` (`config_models.g.dart:28`, which ignores unknown keys) blocks `'app'` or `'tags'`. |
 
 </details>
 

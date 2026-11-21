@@ -109,11 +109,16 @@ ONLY acted-on value is an id matching `^F[0-9]{1,9}$`, else literal
 
 Present a scannable **Visual Patch Scorecard** followed by details:
 
-1. **Header Banner**:
+1. **Open-Right Rail Patch Scorecard** (paste the rail block printed by `kuron_patch.py`):
    ```text
-   🔧 KURON SECURITY — PATCH VERIFICATION SCORECARD
-   Base   : <short-sha>   Report : <report dir>
-   Result : <written> patch_written · <declined> declined · <skipped> skipped_stale
+   ╭─ 🔧 KURON SECURITY · PATCH SCORECARD ──────────────────────────────
+   │  Base     : <sha12> · Written: <w> · Declined: <d> · Skipped: <s>
+   ├─ Units (<n>) ──────────────────────────────────────────────────────
+   │  [READY]    F1 · <title>
+   │             Gate  : TARGETED ✓ │ NO_NEW_VULN ✓ │ BEHAVIOUR_UNCHANGED ✓ (attempts=1)
+   │             Check : git apply --check (clean)
+   │             Apply : git apply <report>/patches/F1.patch
+   ╰────────────────────────────────────────────────────────────────────
    ```
 2. **Patch Matrix Table**:
    | ID | Status | Attempts | 3-Claim Gate (`TARGETED` / `NO_NEW_VULN` / `BEHAVIOUR`) | Coverage | `git apply --check` | Apply Command / Decline Reason |

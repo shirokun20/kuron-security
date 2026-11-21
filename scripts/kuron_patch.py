@@ -258,33 +258,37 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
     written = [u["id"] for u in units if u["status"] == "patch_written"]
     declined = [u["id"] for u in units if u["status"] == "declined"]
     skipped = [u["id"] for u in units if u["status"] == "skipped_stale"]
-    bar = "═" * 72
-    thin = "─" * 72
-    print(f"\n╔{bar}╗")
-    print(f"║ 🔧 KURON SECURITY — PATCH VERIFICATION SCORECARD{' ' * 23}║")
-    print(f"╠{bar}╣")
-    head_line = (
-        f"Base: {base[:12]} │ ✅ Written: {len(written)} │ "
-        f"⛔ Declined: {len(declined)} │ ⏭️  Skipped: {len(skipped)}"
+    rule = "─" * 68
+    print(f"\n╭─ 🔧 KURON SECURITY · PATCH SCORECARD {rule[:30]}")
+    print(
+        f"│  Base     : {base[:12]} · Written: {len(written)} · "
+        f"Declined: {len(declined)} · Skipped: {len(skipped)}"
     )
-    print(f"║ {head_line:<67} ║")
-    print(f"╟{thin}╢")
-    for u in units:
+    print(f"├─ Units ({len(units)}) {rule[:56]}")
+    for idx, u in enumerate(units):
         fid = u["id"]
         st = u["status"]
         att = u.get("attempts", 0)
         chk_str = u.get("apply_check", "-")
-        icon = "✅" if st == "patch_written" else ("⛔" if st == "declined" else "⏭️ ")
-        claims_badge = "T:✓ NNV:✓ BU:✓" if st == "patch_written" else "panel-declined"
-        row = f"{icon} {fid:<3} [{st:<13}] try={att} [{claims_badge}] apply={chk_str}"
-        print(f"║ {row[:69]:<69} ║")
+        title = u.get("title", "")
+        badge = (
+            "[READY]"
+            if st == "patch_written"
+            else ("[DECLINED]" if st == "declined" else "[SKIPPED]")
+        )
+        print(f"│  {badge:<10} {fid} · {title}")
         if st == "patch_written":
-            cmd_line = f"   └─ git apply {patches_display}/{fid}.patch"
-            print(f"║ {cmd_line[:70]:<70} ║")
-        elif u.get("decline_reason"):
-            rsn_line = f"   └─ {u['decline_reason']}"
-            print(f"║ {rsn_line[:70]:<70} ║")
-    print(f"╚{bar}╝")
+            print(
+                f"│             Gate  : TARGETED ✓ │ NO_NEW_VULN ✓ │ "
+                f"BEHAVIOUR_UNCHANGED ✓ (attempts={att})"
+            )
+            print(f"│             Check : git apply --check ({chk_str})")
+            print(f"│             Apply : git apply {patches_display}/{fid}.patch")
+        else:
+            print(f"│             Tries : {att} · Reason: {u.get('decline_reason', '-')}")
+        if idx + 1 < len(units):
+            print("│")
+    print(f"╰{rule}")
     print(f"wrote patches for {written}")
     return 0
 

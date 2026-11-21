@@ -135,54 +135,49 @@ def main() -> None:
         if sev in counts:
             counts[sev] += 1
 
-    icons = {
-        "CRITICAL": "🔴",
-        "HIGH": "🟠",
-        "MEDIUM": "🟡",
-        "LOW": "🔵",
-    }
     total = max(len(records), 1)
-    bar_width = 72
-    bar = "═" * bar_width
-    thin = "─" * bar_width
-    print(f"\n╔{bar}╗")
-    print(f"║ 🛡️  KURON SECURITY — SCAN SCORECARD{' ' * 37}║")
-    print(f"╠{bar}╣")
-    summary_line = (
-        f"Mode: {scan.mode:<8} │ Effort: {str(meta.get('effort') or '-'):<6} "
-        f"│ Commit: {tag:<18} │ Stamp: kuron-panel"
+    rule = "─" * 68
+    scope_str = ", ".join(scan.scope) if scan.scope else "whole repository"
+    print(f"\n╭─ 🛡️  KURON SECURITY · SCAN SCORECARD {rule[:30]}")
+    print(f"│  Mode     : {scan.mode} ({meta.get('effort') or 'default'} effort)")
+    print(f"│  Scope    : {scope_str}")
+    print(f"│  Revision : {tag} · Stamp: kuron-panel")
+    print(
+        f"│  Summary  : {len(records)} kept "
+        f"(CRITICAL {counts['CRITICAL']} · HIGH {counts['HIGH']} · "
+        f"MEDIUM {counts['MEDIUM']} · LOW {counts['LOW']})"
     )
-    print(f"║ {summary_line:<70} ║")
-    sev_line = (
-        f"Total: {len(records):<3} │ "
-        f"🔴 CRIT: {counts['CRITICAL']}   🟠 HIGH: {counts['HIGH']}   "
-        f"🟡 MED: {counts['MEDIUM']}   🔵 LOW: {counts['LOW']}"
-    )
-    print(f"║ {sev_line:<66} ║")
-    print(f"╟{thin}╢")
+    print(f"├─ Severity Breakdown {rule[:47]}")
     for tier in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
         c = counts[tier]
-        filled = int(round((c / total) * 24)) if len(records) > 0 else 0
-        meter = "█" * filled + "░" * (24 - filled)
-        row = f"{icons[tier]} {tier:<8} [{meter}] {c}"
-        print(f"║ {row:<69} ║")
-    print(f"╠{bar}╣")
+        filled = int(round((c / total) * 20)) if len(records) > 0 else 0
+        meter = "█" * filled + "░" * (20 - filled)
+        print(f"│  {tier:<8} : {meter}  {c}")
+    print(f"├─ Kept Findings ({len(records)}) {rule[:48]}")
     if not raws:
-        print(f"║ 🟢 CLEAN — 0 findings survived the 3-lens refutation panel.{' ' * 12}║")
-    for r in raws:
-        fid = str(r.get("id", "?"))
-        sev = str(r.get("severity", "?")).upper()
-        icon = icons.get(sev, "•")
+        print("│  [CLEAN]   0 findings survived the 3-lens refutation panel.")
+    for idx, r in enumerate(raws):
+        fid = str(r.get("id", f"F{idx + 1}"))
+        sev = str(r.get("severity", "LOW")).upper()
         cwe = str(r.get("cwe_id") or r.get("cweId") or "-")
         loc = f"{r.get('file', '?')}:{r.get('line', '?')}"
+        title = str(r.get("title", "")).strip()
         conf = str(r.get("confidence", "high")).upper()
-        panel_badge = "3/3✓" if conf == "HIGH" else "2/3✓"
-        row = f"{icon} {fid:<3} [{sev:<8}│{panel_badge}] {cwe:<8} {loc}"
-        print(f"║ {row[:69]:<69} ║")
-    print(f"╠{bar}╣")
-    out_line = f"📦 Report : KURON-SECURITY-RESULTS.md  │  SARIF + JSONL + Stamp ready"
-    print(f"║ {out_line:<69} ║")
-    print(f"╚{bar}╝")
+        panel_badge = "3/3✓ (R:✓ I:✓ D:✓)" if conf == "HIGH" else "2/3✓"
+        badge = f"[{sev}]"
+        print(f"│  {badge:<9} {fid} · {cwe} · {panel_badge}")
+        if title:
+            print(f"│            {title}")
+        print(f"│            └─ {loc}")
+        if idx + 1 < len(raws):
+            print("│")
+    print(f"├─ Artifacts {rule[:56]}")
+    print("│  Report   : KURON-SECURITY-RESULTS.md")
+    print(
+        f"│  Machine  : KURON-SECURITY-RESULTS.sarif · .jsonl · "
+        f"KURON-SECURITY-REVISION-{tag}.json"
+    )
+    print(f"╰{rule}")
     print(f"wrote {len(records)} findings (stamp KURON-SECURITY-REVISION-{tag}.json)")
 
 

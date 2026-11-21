@@ -2,7 +2,7 @@
 name: kuron-security
 description: "Use when the user asks to scan, audit or check code with Claude Security (codebase scan, scan changes, or suggest patches) but the Claude Code Workflow tool is unavailable. Runs the Kuron Security adaptation - parallel researcher plus three-lens verifier panel via subagents, reusing the official plugin prompts, severity rules and report shape, with honestly-labeled kuron-panel verification and SARIF plus JSONL products."
 metadata:
-  version: 1.2.1
+  version: 1.2.2
   updated: 2026-11-21
 ---
 
@@ -154,19 +154,26 @@ Keep the user visually oriented at every phase, then finish with a high-contrast
    - `[Phase 2/3] ⚖️  Running 3-Lens Refutation Panel (<n> candidates × REACHABILITY · IMPACT · DEFENSES)...`
    - `[Phase 3/3] 📦 Rendering Report, SARIF, JSONL & kuron-panel Stamp...`
 
-1. **Terminal & Chat Header Scorecard Block** (paste the box printed by `kuron_products.py` or render this block):
+1. **Open-Right Rail Scorecard Block** (never use right-hand `║` borders that misalign on emojis or clip file paths; paste the rail block printed by `kuron_products.py`):
    ```text
-   ╔════════════════════════════════════════════════════════════════════════╗
-   ║ 🛡️  KURON SECURITY — SCAN SCORECARD                                    ║
-   ╠════════════════════════════════════════════════════════════════════════╣
-   ║ Mode: <mode>   │ Effort: <tier> │ Commit: <sha12>      │ Stamp: kuron-panel ║
-   ║ Total: <n>     │ 🔴 CRIT: <c>   🟠 HIGH: <h>   🟡 MED: <m>   🔵 LOW: <l> ║
-   ╟────────────────────────────────────────────────────────────────────────╢
-   ║ 🔴 CRITICAL [░░░░░░░░░░░░░░░░░░░░░░░░] <c>                             ║
-   ║ 🟠 HIGH     [░░░░░░░░░░░░░░░░░░░░░░░░] <h>                             ║
-   ║ 🟡 MEDIUM   [████████░░░░░░░░░░░░░░░░] <m>                             ║
-   ║ 🔵 LOW      [████████████████░░░░░░░░] <l>                             ║
-   ╚════════════════════════════════════════════════════════════════════════╝
+   ╭─ 🛡️  KURON SECURITY · SCAN SCORECARD ──────────────────────────────
+   │  Mode     : <mode> (<tier> effort)
+   │  Scope    : <scope or whole repository>
+   │  Revision : <sha12> · Stamp: kuron-panel
+   │  Summary  : <n> kept (CRITICAL <c> · HIGH <h> · MEDIUM <m> · LOW <l>)
+   ├─ Severity Breakdown ───────────────────────────────────────────────
+   │  CRITICAL : ░░░░░░░░░░░░░░░░░░░░  <c>
+   │  HIGH     : ░░░░░░░░░░░░░░░░░░░░  <h>
+   │  MEDIUM   : ███████░░░░░░░░░░░░░  <m>
+   │  LOW      : █████████████░░░░░░░  <l>
+   ├─ Kept Findings (<n>) ──────────────────────────────────────────────
+   │  [MEDIUM]  F1 · CWE-20 · 3/3✓ (R:✓ I:✓ D:✓)
+   │            <title>
+   │            └─ <full/path/to/file:line>
+   ├─ Artifacts ────────────────────────────────────────────────────────
+   │  Report   : KURON-SECURITY-RESULTS.md
+   │  Machine  : KURON-SECURITY-RESULTS.sarif · .jsonl · REVISION.json
+   ╰────────────────────────────────────────────────────────────────────
    ```
 
 2. **Findings & 3-Lens Panel Matrix** (when findings > 0):
@@ -174,10 +181,12 @@ Keep the user visually oriented at every phase, then finish with a high-contrast
    | ID | Severity (Δ Panel) | Confidence | Location (`file:line`) | CWE | 3-Lens Panel (`R` · `I` · `D`) | Impact & Fix Summary |
    |---|---|---|---|---|---|---|
 
-3. **Visual Enhancements inside `KURON-SECURITY-RESULTS.md`** (in addition to `report-spec.md` fields):
+3. **GitHub Security Advisory Card Layout inside `KURON-SECURITY-RESULTS.md`** (in addition to `report-spec.md` fields):
    - **Executive Callout Banner** at the top (`> [!WARNING]` / `> [!CAUTION]` / `> [!TIP]`) summarizing kept vs. candidate count, panel downgrades, and `kuron-panel` status.
+   - **1-Row Advisory Metadata Bar** under each `### F<n>` heading:
+     `| Severity | Confidence | Weakness | Sink (file:line) | Panel Verdict |`
    - **Source-to-Sink Attack Flow (`mermaid` `flowchart LR`)** on every `CRITICAL`, `HIGH`, or `MEDIUM` finding showing `🔴 Untrusted Source (file:line)` → `🟡 Guard / Hop (file:line)` → `💥 Sink (file:line)` (always quote node labels with `["..."]` and avoid HTML tags other than `<br/>`).
-   - **Collapsible `<details>` 3-Lens Panel Audit Trail** directly under each finding's `**Verification.**` line containing the 3 independent verifier verdicts (`REACHABILITY`, `IMPACT`, `DEFENSES`) and their decisive `file:line` citations so reviewers can audit why a finding survived or was downgraded without cluttering the 90-second overview.
+   - **Collapsible `<details>` 3-Lens Panel Audit Table** directly under each finding's `**Verification.**` line formatted as a 4-column table (`| Lens | Verdict | Rated Severity | Decisive Code Evidence (file:line) |`) so reviewers can audit why a finding survived or was downgraded in 5 seconds.
 
 4. **Artifacts & Status**: Where the report folder landed (`KURON-SECURITY-<ts>/`), clickable links to `KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, and the revision stamp, plain-language explanation of `kuron-panel`, and missing readings if any.
 5. **Next Action**: Empty report (`🟢 CLEAN`) is complete. With kept findings, offer to suggest fixes (`suggest-patches`). Never imply tests ran or exploits fired.

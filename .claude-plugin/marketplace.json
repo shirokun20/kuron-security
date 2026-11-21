@@ -10,7 +10,7 @@
     {
       "name": "kuron-security",
       "description": "Run Anthropic's Claude Security pipeline (codebase scan, scan changes, suggest patches) on any AI agent using subagent waves, a 3-lens adversarial refutation panel (REACHABILITY, IMPACT, DEFENSES), isolated scratch-clone patch verification, visual scorecards, and Mermaid source-to-sink attack graphs.",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "author": {
         "name": "shirokun20"
       },
