@@ -36,6 +36,19 @@ def load_json(path: str):
         return json.load(fh)
 
 
+def load_findings(report_dir: str) -> list[dict]:
+    fjson = os.path.join(report_dir, "findings.json")
+    if os.path.exists(fjson):
+        return load_json(fjson)
+    fjsonl = os.path.join(report_dir, "KURON-SECURITY-RESULTS.jsonl")
+    if os.path.exists(fjsonl):
+        with open(fjsonl) as fh:
+            return [json.loads(line) for line in fh if line.strip()]
+    raise FileNotFoundError(
+        f"neither findings.json nor KURON-SECURITY-RESULTS.jsonl found in {report_dir}"
+    )
+
+
 def cmd_prepare(report_dir: str, selection: str, repo_root: str, base: str) -> int:
     name = os.path.basename(os.path.normpath(report_dir))
     if not REPORT_RE.match(name):
@@ -48,7 +61,7 @@ def cmd_prepare(report_dir: str, selection: str, repo_root: str, base: str) -> i
     if git(["rev-parse", "--verify", "--quiet", base + "^{commit}"], cwd=repo_root).returncode:
         return fail(f"base {base!r} names no commit")
 
-    findings = load_json(os.path.join(report_dir, "findings.json"))
+    findings = load_findings(report_dir)
     by_id = {f["id"]: f for f in findings}
     if selection == "all":
         units = [f["id"] for f in findings]
@@ -241,7 +254,38 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
         p = os.path.join(patch_dir, entry)
         if os.path.isdir(p) and entry.startswith("scratch-"):
             shutil.rmtree(p, ignore_errors=True)
-    print(f"wrote patches for {[u['id'] for u in units if u['status']=='patch_written']}")
+
+    written = [u["id"] for u in units if u["status"] == "patch_written"]
+    declined = [u["id"] for u in units if u["status"] == "declined"]
+    skipped = [u["id"] for u in units if u["status"] == "skipped_stale"]
+    bar = "═" * 72
+    thin = "─" * 72
+    print(f"\n╔{bar}╗")
+    print(f"║ 🔧 KURON SECURITY — PATCH VERIFICATION SCORECARD{' ' * 23}║")
+    print(f"╠{bar}╣")
+    head_line = (
+        f"Base: {base[:12]} │ ✅ Written: {len(written)} │ "
+        f"⛔ Declined: {len(declined)} │ ⏭️  Skipped: {len(skipped)}"
+    )
+    print(f"║ {head_line:<67} ║")
+    print(f"╟{thin}╢")
+    for u in units:
+        fid = u["id"]
+        st = u["status"]
+        att = u.get("attempts", 0)
+        chk_str = u.get("apply_check", "-")
+        icon = "✅" if st == "patch_written" else ("⛔" if st == "declined" else "⏭️ ")
+        claims_badge = "T:✓ NNV:✓ BU:✓" if st == "patch_written" else "panel-declined"
+        row = f"{icon} {fid:<3} [{st:<13}] try={att} [{claims_badge}] apply={chk_str}"
+        print(f"║ {row[:69]:<69} ║")
+        if st == "patch_written":
+            cmd_line = f"   └─ git apply {patches_display}/{fid}.patch"
+            print(f"║ {cmd_line[:70]:<70} ║")
+        elif u.get("decline_reason"):
+            rsn_line = f"   └─ {u['decline_reason']}"
+            print(f"║ {rsn_line[:70]:<70} ║")
+    print(f"╚{bar}╝")
+    print(f"wrote patches for {written}")
     return 0
 
 

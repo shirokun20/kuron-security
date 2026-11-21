@@ -140,11 +140,37 @@ findings in batches). Promote products up, move helper leftovers
 Never write `verified`/`unverified`: that calibration belongs to the
 official pipeline, not ours.
 
-### Report to the user
-Where it landed, finding counts by severity, the `kuron-panel` status
-in plain words, missing readings if any. Empty report is complete.
-With kept findings, offer to suggest fixes. Never imply tests ran or
-exploits fired.
+### Live Visual Progress & Final Scorecard (Report to the user)
+
+Keep the user visually oriented at every phase, then finish with a high-contrast **Visual Scorecard**:
+
+0. **Live Wave Progress Banners** (print a one-line status banner as each wave launches):
+   - `[Phase 1/3] 🔍 Dispatching Researchers (<n> subagents across <scope>)...`
+   - `[Phase 2/3] ⚖️  Running 3-Lens Refutation Panel (<n> candidates × REACHABILITY · IMPACT · DEFENSES)...`
+   - `[Phase 3/3] 📦 Rendering Report, SARIF, JSONL & kuron-panel Stamp...`
+
+1. **Terminal & Chat Header Scorecard Block** (paste the box printed by `kuron_products.py` or render this block):
+   ```text
+   ╔════════════════════════════════════════════════════════════════════════╗
+   ║ 🛡️  KURON SECURITY — SCAN SCORECARD                                    ║
+   ╠════════════════════════════════════════════════════════════════════════╣
+   ║ Mode: <mode>   │ Effort: <tier> │ Commit: <sha12>      │ Stamp: kuron-panel ║
+   ║ Total: <n>     │ 🔴 CRIT: <c>   🟠 HIGH: <h>   🟡 MED: <m>   🔵 LOW: <l> ║
+   ╟────────────────────────────────────────────────────────────────────────╢
+   ║ 🔴 CRITICAL [░░░░░░░░░░░░░░░░░░░░░░░░] <c>                             ║
+   ║ 🟠 HIGH     [░░░░░░░░░░░░░░░░░░░░░░░░] <h>                             ║
+   ║ 🟡 MEDIUM   [████████░░░░░░░░░░░░░░░░] <m>                             ║
+   ║ 🔵 LOW      [████████████████░░░░░░░░] <l>                             ║
+   ╚════════════════════════════════════════════════════════════════════════╝
+   ```
+
+2. **Findings & 3-Lens Panel Matrix** (when findings > 0):
+   Use severity emoji badges (`🔴 CRITICAL`, `🟠 HIGH`, `🟡 MEDIUM`, `🔵 LOW`) and explicit panel vote pills (`✅ TP` / `❌ FP` / `⬇️ downgraded`):
+   | ID | Severity (Δ Panel) | Confidence | Location (`file:line`) | CWE | 3-Lens Panel (`R` · `I` · `D`) | Impact & Fix Summary |
+   |---|---|---|---|---|---|---|
+
+3. **Artifacts & Status**: Where the report folder landed (`KURON-SECURITY-<ts>/`), clickable links to `KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, and the revision stamp, plain-language explanation of `kuron-panel`, and missing readings if any.
+4. **Next Action**: Empty report (`🟢 CLEAN`) is complete. With kept findings, offer to suggest fixes (`suggest-patches`). Never imply tests ran or exploits fired.
 
 ## Invariants (no exceptions)
 

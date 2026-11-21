@@ -27,7 +27,7 @@ skills_dir_for() {
     claude-code|claude) echo "$HOME/.claude/skills" ;;
     codex) echo "$HOME/.codex/skills" ;;
     opencode) echo "$HOME/.config/opencode/skills" ;;
-    antigravity) echo "$HOME/.agents/skills" ;;
+    antigravity) echo "$HOME/.gemini/config/skills" ;;
     *) echo "unknown harness: $1 (omp|claude-code|codex|opencode|antigravity)" >&2; exit 2 ;;
   esac
 }
@@ -38,7 +38,7 @@ harness_present() {
     claude-code|claude) [ -d "$HOME/.claude" ] ;;
     codex) [ -d "$HOME/.codex" ] ;;
     opencode) [ -d "$HOME/.config/opencode" ] ;;
-    antigravity) [ -d "$HOME/.agents" ] ;;
+    antigravity) [ -d "$HOME/.gemini/config" ] ;;
   esac
 }
 
@@ -82,7 +82,7 @@ if [ "$UNINSTALL" -eq 1 ]; then
   if [ -n "$HARNESS" ]; then
     unlink_from "$(skills_dir_for "$HARNESS")"
   else
-    for h in omp claude-code codex opencode; do unlink_from "$(skills_dir_for "$h")"; done
+    for h in omp claude-code codex opencode antigravity; do unlink_from "$(skills_dir_for "$h")"; done
   fi
   echo "done."
   exit 0
@@ -103,7 +103,7 @@ if [ "$LOCAL" -eq 1 ]; then
 fi
 
 n=0
-for h in omp claude-code codex opencode; do
+for h in omp claude-code codex opencode antigravity; do
   if harness_present "$h"; then link_into "$(skills_dir_for "$h")"; n=$((n+1)); fi
 done
 [ "$n" -eq 0 ] && link_into "$HOME/.agents/skills"

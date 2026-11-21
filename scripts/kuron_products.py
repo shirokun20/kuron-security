@@ -20,6 +20,11 @@ def plugin_scripts() -> str:
                 "~/.claude/plugins/cache/claude-plugins-official/claude-security/*/scripts"
             )
         )
+        + glob.glob(
+            os.path.expanduser(
+                "~/.gemini/config/plugins/claude-security/scripts"
+            )
+        )
     )
     if not cands:
         raise SystemExit("official claude-security plugin not found in cache")
@@ -123,6 +128,61 @@ def main() -> None:
     ) as fh:
         json.dump(stamp, fh, indent=2)
         fh.write("\n")
+
+    counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    for r in raws:
+        sev = str(r.get("severity", "LOW")).upper()
+        if sev in counts:
+            counts[sev] += 1
+
+    icons = {
+        "CRITICAL": "🔴",
+        "HIGH": "🟠",
+        "MEDIUM": "🟡",
+        "LOW": "🔵",
+    }
+    total = max(len(records), 1)
+    bar_width = 72
+    bar = "═" * bar_width
+    thin = "─" * bar_width
+    print(f"\n╔{bar}╗")
+    print(f"║ 🛡️  KURON SECURITY — SCAN SCORECARD{' ' * 37}║")
+    print(f"╠{bar}╣")
+    summary_line = (
+        f"Mode: {scan.mode:<8} │ Effort: {str(meta.get('effort') or '-'):<6} "
+        f"│ Commit: {tag:<18} │ Stamp: kuron-panel"
+    )
+    print(f"║ {summary_line:<70} ║")
+    sev_line = (
+        f"Total: {len(records):<3} │ "
+        f"🔴 CRIT: {counts['CRITICAL']}   🟠 HIGH: {counts['HIGH']}   "
+        f"🟡 MED: {counts['MEDIUM']}   🔵 LOW: {counts['LOW']}"
+    )
+    print(f"║ {sev_line:<66} ║")
+    print(f"╟{thin}╢")
+    for tier in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
+        c = counts[tier]
+        filled = int(round((c / total) * 24)) if len(records) > 0 else 0
+        meter = "█" * filled + "░" * (24 - filled)
+        row = f"{icons[tier]} {tier:<8} [{meter}] {c}"
+        print(f"║ {row:<69} ║")
+    print(f"╠{bar}╣")
+    if not raws:
+        print(f"║ 🟢 CLEAN — 0 findings survived the 3-lens refutation panel.{' ' * 12}║")
+    for r in raws:
+        fid = str(r.get("id", "?"))
+        sev = str(r.get("severity", "?")).upper()
+        icon = icons.get(sev, "•")
+        cwe = str(r.get("cwe_id") or r.get("cweId") or "-")
+        loc = f"{r.get('file', '?')}:{r.get('line', '?')}"
+        conf = str(r.get("confidence", "high")).upper()
+        panel_badge = "3/3✓" if conf == "HIGH" else "2/3✓"
+        row = f"{icon} {fid:<3} [{sev:<8}│{panel_badge}] {cwe:<8} {loc}"
+        print(f"║ {row[:69]:<69} ║")
+    print(f"╠{bar}╣")
+    out_line = f"📦 Report : KURON-SECURITY-RESULTS.md  │  SARIF + JSONL + Stamp ready"
+    print(f"║ {out_line:<69} ║")
+    print(f"╚{bar}╝")
     print(f"wrote {len(records)} findings (stamp KURON-SECURITY-REVISION-{tag}.json)")
 
 

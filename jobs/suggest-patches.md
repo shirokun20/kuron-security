@@ -107,12 +107,19 @@ ONLY acted-on value is an id matching `^F[0-9]{1,9}$`, else literal
 
 ## Report to the user
 
-Which findings got a patch (panel-of-agents trust label — never
-"tested"; flag review-only `untested` plainly), which declined after
-how many attempts and what blocked each, not-confirmed stated as
-such, set-aside weaknesses in one line, folder path with PATCHES.md
-as index, stale-file removals named. End with exactly: "Want me to
-apply any of these, or open a pull request for one? Just ask."
+Present a scannable **Visual Patch Scorecard** followed by details:
+
+1. **Header Banner**:
+   ```text
+   🔧 KURON SECURITY — PATCH VERIFICATION SCORECARD
+   Base   : <short-sha>   Report : <report dir>
+   Result : <written> patch_written · <declined> declined · <skipped> skipped_stale
+   ```
+2. **Patch Matrix Table**:
+   | ID | Status | Attempts | 3-Claim Gate (`TARGETED` / `NO_NEW_VULN` / `BEHAVIOUR`) | Coverage | `git apply --check` | Apply Command / Decline Reason |
+   |---|---|---|---|---|---|---|
+3. **Narrative Details**:
+   Which findings got a patch (panel-of-agents trust label — never "tested"; flag review-only `untested` plainly), which declined after how many attempts and what blocked each, not-confirmed stated as such, set-aside weaknesses in one line, folder path with `PATCHES.md` as index, stale-file removals named. End with exactly: "Want me to apply any of these, or open a pull request for one? Just ask."
 
 ## Nothing to patch
 
