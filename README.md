@@ -31,6 +31,23 @@
 
 ## Quickstart (30 seconds)
 
+### Option A — Universal 1-liner via `skills.sh` (installs to 20+ agents)
+
+```bash
+npx skills add shirokun20/kuron-security -g -y
+```
+
+Automatically detects and installs into **Antigravity, Claude Code, Codex, Cursor, OpenCode, Cline, Amp, Windsurf, Copilot, and 15+ other agents**.
+
+### Option B — Claude Code / omp Plugin Marketplace
+
+```text
+/plugin marketplace add shirokun20/kuron-security
+/plugin install kuron-security@kuron-security
+```
+
+### Option C — Git clone & `install.sh` (zero Node/npm required)
+
 ```bash
 git clone https://github.com/shirokun20/kuron-security.git
 cd kuron-security
