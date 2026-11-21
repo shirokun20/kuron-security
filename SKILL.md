@@ -2,10 +2,11 @@
 name: kuron-security
 description: "Use when the user asks to scan, audit or check code with Claude Security (codebase scan, scan changes, or suggest patches) but the Claude Code Workflow tool is unavailable. Runs the Kuron Security adaptation - parallel researcher plus three-lens verifier panel via subagents, reusing the official plugin prompts, severity rules and report shape, with honestly-labeled kuron-panel verification and SARIF plus JSONL products."
 metadata:
-  version: 1.0.0
+  version: 1.2.0
+  updated: 2026-11-21
 ---
 
-# Kuron Security (Claude Security adapter for omp)
+# Kuron Security (Claude Security multi-harness adapter — 2026)
 
 > Credit: adapted from Anthropic's **Claude Security** plugin for Claude
 > Code (`claude-plugins-official/claude-security`). Researcher/verifier/
@@ -165,12 +166,17 @@ Keep the user visually oriented at every phase, then finish with a high-contrast
    ```
 
 2. **Findings & 3-Lens Panel Matrix** (when findings > 0):
-   Use severity emoji badges (`🔴 CRITICAL`, `🟠 HIGH`, `🟡 MEDIUM`, `🔵 LOW`) and explicit panel vote pills (`✅ TP` / `❌ FP` / `⬇️ downgraded`):
+   Use GitHub Alert Callouts (`> [!CAUTION]` when `CRITICAL`/`HIGH` > 0, `> [!WARNING]` when `MEDIUM` > 0, `> [!NOTE]` when `LOW` only, `> [!TIP]` when `0` findings), severity emoji badges (`🔴 CRITICAL`, `🟠 HIGH`, `🟡 MEDIUM`, `🔵 LOW`), and explicit panel vote pills (`✅ TP` / `❌ FP` / `⬇️ downgraded`):
    | ID | Severity (Δ Panel) | Confidence | Location (`file:line`) | CWE | 3-Lens Panel (`R` · `I` · `D`) | Impact & Fix Summary |
    |---|---|---|---|---|---|---|
 
-3. **Artifacts & Status**: Where the report folder landed (`KURON-SECURITY-<ts>/`), clickable links to `KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, and the revision stamp, plain-language explanation of `kuron-panel`, and missing readings if any.
-4. **Next Action**: Empty report (`🟢 CLEAN`) is complete. With kept findings, offer to suggest fixes (`suggest-patches`). Never imply tests ran or exploits fired.
+3. **Visual Enhancements inside `KURON-SECURITY-RESULTS.md`** (in addition to `report-spec.md` fields):
+   - **Executive Callout Banner** at the top (`> [!WARNING]` / `> [!CAUTION]` / `> [!TIP]`) summarizing kept vs. candidate count, panel downgrades, and `kuron-panel` status.
+   - **Source-to-Sink Attack Flow (`mermaid` `flowchart LR`)** on every `CRITICAL`, `HIGH`, or `MEDIUM` finding showing `🔴 Untrusted Source (file:line)` → `🟡 Guard / Hop (file:line)` → `💥 Sink (file:line)` (always quote node labels with `["..."]` and avoid HTML tags other than `<br/>`).
+   - **Collapsible `<details>` 3-Lens Panel Audit Trail** directly under each finding's `**Verification.**` line containing the 3 independent verifier verdicts (`REACHABILITY`, `IMPACT`, `DEFENSES`) and their decisive `file:line` citations so reviewers can audit why a finding survived or was downgraded without cluttering the 90-second overview.
+
+4. **Artifacts & Status**: Where the report folder landed (`KURON-SECURITY-<ts>/`), clickable links to `KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, and the revision stamp, plain-language explanation of `kuron-panel`, and missing readings if any.
+5. **Next Action**: Empty report (`🟢 CLEAN`) is complete. With kept findings, offer to suggest fixes (`suggest-patches`). Never imply tests ran or exploits fired.
 
 ## Invariants (no exceptions)
 

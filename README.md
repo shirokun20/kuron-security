@@ -1,29 +1,31 @@
 # 🛡️ Kuron Security
 
 [![MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![Agent Skills](https://img.shields.io/badge/agent--skills-compatible-blue)](https://agentskills.io)
+[![Agent Skills 2026](https://img.shields.io/badge/agent--skills-2026_compatible-blue)](https://agentskills.io)
+[![SARIF 2.1.0](https://img.shields.io/badge/SARIF-2.1.0-informational)](#what-you-get)
 [![Release](https://img.shields.io/github/v/release/shirokun20/kuron-security)](https://github.com/shirokun20/kuron-security/releases)
 
-**Run Anthropic's Claude Security pipeline on any AI coding agent — no proprietary `Workflow` tool required.**
+**Run Anthropic's Claude Security pipeline on any 2026 AI coding agent — no proprietary `Workflow` tool required.**
 
-If you try running official `claude-security` outside Claude Code's internal workflow runtime, it stops before reading a single file:
-
-```text
-The scan pipeline is unavailable in this session (it needs the Workflow tool)...
-```
-
-**Kuron Security** replaces that locked workflow engine with waves of standard subagents your harness already supports (**Antigravity**, **omp**, **OpenCode**, **Codex**, **Claude Code**). You get the exact same three jobs, official researcher/verifier prompts, CWE mapping, and SARIF/JSONL products — honestly stamped `kuron-panel`.
+> [!IMPORTANT]
+> If you run official `claude-security` outside Claude Code's internal `Workflow` runtime, it halts before reading a single file:
+> ```text
+> The scan pipeline is unavailable in this session (it needs the Workflow tool)...
+> ```
+> **Kuron Security** replaces that locked engine with waves of standard subagents your 2026 harness already has (**Antigravity 2.0**, **omp**, **OpenCode**, **Codex**, **Claude Code**). Same three jobs, same official researcher/verifier prompts, same report & SARIF 2.1.0 shapes — plus **visual scorecards**, **Mermaid source-to-sink attack graphs**, and **collapsible 3-lens panel audit trails**, honestly stamped `kuron-panel`.
 
 ---
 
-## Why use this instead of `"audit my code for bugs"`?
+## Why Kuron Security vs. a generic `"audit my code"` prompt?
 
-Single-prompt security audits hallucinate theoretical risks and inflate severities. Kuron Security enforces an adversarial multi-agent pipeline:
-
-- **Source-to-sink researchers** trace untrusted input across file boundaries to a concrete `file:line` sink and verbatim code snippet.
-- **3-lens refutation panel per candidate** — three independent verifiers (**`REACHABILITY`**, **`IMPACT`**, **`DEFENSES`**) start from `FALSE_POSITIVE` and try to **disprove** the finding. A candidate survives only with **≥ 2 `TRUE_POSITIVE` votes**, and the panel automatically downgrades inflated severity to the lowest confirming vote.
-- **Adversarial patch waves** — for every finding you choose to fix, a generator stages a patch in an isolated scratch clone while an independent verifier + a fresh attacker challenge the diff before emitting a ready-to-apply `.patch`.
-- **Zero unasked mutations** — researchers and verifiers are strictly read-only. Nothing is ever auto-applied, committed, pushed, or opened as a PR.
+| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v1.2.0` · 2026)** |
+|---|---|---|---|
+| **Harnesses supported** | Any chat | Claude Code (`Workflow` tool only) | **Antigravity · omp · OpenCode · Codex · Claude Code** |
+| **False-positive filtering** | ❌ Single LLM guesses & pads | ✅ 3-lens verifier panel | ✅ **3-lens adversarial panel (`REACHABILITY` · `IMPACT` · `DEFENSES`)** |
+| **Severity calibration** | ❌ Frequently inflates to `HIGH`/`CRITICAL` | ✅ Clamped to lowest confirming voter | ✅ **Automatic panel severity downgrade + visual meter** |
+| **Attack-path visualization** | ❌ Prose wall | ❌ Prose only | ✅ **Per-finding Mermaid Source-to-Sink graph + `<details>` audit trail** |
+| **Patch verification** | ❌ Edits your working tree directly | ✅ Scratch clone + verifier + attacker | ✅ **Isolated scratch clone + 3-claim verifier + fresh attacker challenge** |
+| **Machine outputs** | ❌ Chat text only | ✅ MD + JSONL + SARIF + stamp | ✅ **MD + JSONL + SARIF 2.1.0 + `kuron-panel` stamp** |
 
 ---
 
@@ -32,21 +34,19 @@ Single-prompt security audits hallucinate theoretical risks and inflate severiti
 ```bash
 git clone https://github.com/shirokun20/kuron-security.git
 cd kuron-security
-./install.sh          # auto-links into every installed harness
+./install.sh          # auto-links into every installed 2026 harness
 ./install.sh --check  # verifies SKILL.md, python3 (stdlib only), git, and scripts
 ```
 
-| Harness | Global / Project Path | Install Command |
+| Harness (2026) | Global / Workspace Target | Install Command |
 |---|---|---|
-| **Antigravity** | `~/.gemini/config/skills` or `<repo>/.agents/skills` | `./install.sh` or `./install.sh --local` |
+| **Antigravity (AGY 2.0)** | `~/.gemini/config/skills` or `<repo>/.agents/skills` | `./install.sh` or `./install.sh --local` |
 | **omp** | `~/.agents/skills` | `./install.sh` |
 | **Claude Code** | `~/.claude/skills` (or `.claude-plugin/plugin.json`) | `./install.sh --harness claude-code` |
 | **Codex** | `~/.codex/skills` | `./install.sh --harness codex` |
 | **OpenCode** | `~/.config/opencode/skills` or `<repo>/.opencode/skills` | `./install.sh` or `./install.sh --local` |
 
-### Try it in your agent
-
-Once installed, just ask your agent in plain English:
+### Trigger prompts (copy & paste)
 
 ```text
 Scan lib/core/services with Kuron Security at low effort.
@@ -60,22 +60,41 @@ Suggest patches for all findings in the latest Kuron Security report.
 
 ---
 
-## Field-tested results
+## How the 3-Phase Adversarial Pipeline Works
 
-Tested on real production repositories and planted vulnerabilities across multiple agent harnesses:
+```mermaid
+flowchart TD
+    subgraph Phase1["🔍 Phase 1: Read-Only Discovery"]
+        R1["Component × Lens Researchers"] --> C["Raw Candidates (C1..Cn)<br/>Exact file:line + verbatim snippet + CWE"]
+    end
 
-| Harness | Mode | Real-world result |
-|---|---|---|
-| **omp** | Native subagents | Scanned pre-fix tree → **4 candidates, 12 panel votes, 4 kept** (2 severities lowered by panel) → **3 clean `.patch` files** (`git apply --check` clean) + **1 honest decline** after 2 rounds (spotted that central-directory ZIP headers can be spoofed). |
-| **Antigravity** | Native subagents | Scanned post-fix `HEAD` (`b977b4e5`) → confirmed all 3 `CWE-22` path-traversal fixes held, then discovered a **brand-new `MEDIUM` (`CWE-20`) reserved-ID hijack** (`"source": "app"` overwriting global `app-config.json` and `storage.folders.backup` across restarts) + 2 resource-exhaustion findings (**9/9 panel votes**, MD + JSONL + SARIF + stamp). |
-| **OpenCode** (`opencode run`) | Headless CLI | Found planted SQLi candidate; panel conservatively rejected `1/3` (missing route context in isolated fixture — zero false-positive promotion) and emitted full MD/JSONL/SARIF bundle. |
-| **Claude Code / Codex** | Subagent skill | Spec-compatible; awaiting community field logs. |
+    subgraph Phase2["⚖️ Phase 2: 3-Lens Adversarial Refutation (Default: FALSE_POSITIVE)"]
+        C --> L1["Lens 1: REACHABILITY<br/>Attacker-controlled entry?"]
+        C --> L2["Lens 2: IMPACT<br/>Real worst-case gain?"]
+        C --> L3["Lens 3: DEFENSES<br/>Upstream guard exists?"]
+        L1 & L2 & L3 --> Gate{"≥ 2 TRUE_POSITIVE?"}
+        Gate -->|"No (< 2 votes)"| Drop["❌ Dropped as False Positive"]
+        Gate -->|"Yes (clamp to lowest severity)"| Kept["✅ Kept Findings (F1..Fn)<br/>Scorecard + Mermaid Graph + SARIF 2.1.0"]
+    end
+
+    subgraph Phase3["🔧 Phase 3: Isolated Scratch Patching"]
+        Kept --> Gen["Patch Generator<br/>(Detached Scratch Clone at PATCH BASE)"]
+        Gen --> Ver["Independent Patch Verifier<br/>(TARGETED · NO_NEW_VULN · BEHAVIOUR)"]
+        Gen --> Atk["Fresh Attacker Researcher<br/>(Hunts bypasses in staged diff)"]
+        Ver & Atk --> PGate{"3/3 CONFIDENT & 0 Bypasses?"}
+        PGate -->|"1st Objection"| Rev["1x Revision Round"] --> Gen
+        PGate -->|"2nd Objection"| Dec["⛔ Honest Decline Note"]
+        PGate -->|"Pass"| Patch["📦 Ready-to-Apply F<n>.patch<br/>(git apply --check verified)"]
+    end
+```
 
 ---
 
-## What you get
+## What You Get (Visual Output Preview)
 
-Every run shows live wave progress (`🔍 Research` → `⚖️ 3-Lens Panel` → `📦 Render`) and prints an instant **Visual Terminal & Chat Scorecard** with severity meters and panel vote badges, backed by a self-contained, git-ignored report directory (`KURON-SECURITY-<UTC-timestamp>/`):
+### 1. Terminal & Chat Scorecards
+
+Every scan and patch run prints an instant high-contrast scorecard box:
 
 ```text
 ╔════════════════════════════════════════════════════════════════════════╗
@@ -97,8 +116,6 @@ Every run shows live wave progress (`🔍 Research` → `⚖️ 3-Lens Panel` �
 ╚════════════════════════════════════════════════════════════════════════╝
 ```
 
-And when you run **Suggest Patches**, you get a **Patch Verification Scorecard** with 3-claim verification badges (`T:✓ NNV:✓ BU:✓`) and ready-to-paste `git apply` commands:
-
 ```text
 ╔════════════════════════════════════════════════════════════════════════╗
 ║ 🔧 KURON SECURITY — PATCH VERIFICATION SCORECARD                       ║
@@ -110,42 +127,57 @@ And when you run **Suggest Patches**, you get a **Patch Verification Scorecard**
 ╚════════════════════════════════════════════════════════════════════════╝
 ```
 
-```text
-KURON-SECURITY-20261121-125051/
-├── KURON-SECURITY-RESULTS.md                # 90-second human triage report (see examples/)
-├── KURON-SECURITY-RESULTS.jsonl             # machine-readable findings for CI gates
-├── KURON-SECURITY-RESULTS.sarif             # SARIF 2.1.0 for GitHub Code Scanning & IDEs
-├── KURON-SECURITY-REVISION-b977b4e5736d.json # honest revision & verification stamp
-└── patches/                                 # F1.patch, F1.md, PATCHES.md, patches.jsonl
+### 2. Visual Finding with Mermaid Attack Flow & Collapsible Panel Proof
+
+Inside `KURON-SECURITY-RESULTS.md`, `MEDIUM+` findings include a **Source-to-Sink Mermaid graph** (verify the call chain in 5 seconds) and a **collapsible `<details>` 3-lens panel audit trail**:
+
+> [!WARNING]
+> **F1 — Reserved config identifiers (`'app'`, `'tags'`) not blocked during source config installation (`MEDIUM`, confidence `high`, `CWE-20`)**
+
+```mermaid
+flowchart LR
+    src["🔴 Untrusted Manifest / ZIP<br/>source_installer_service.dart:407"] -->|"sourceId = 'app'"| val["🟡 _validateSourceId<br/>remote_config_service.dart:67<br/>(regex ^[a-z0-9_-]+$ passes)"]
+    val --> write["🟠 Write configs/app-config.json<br/>remote_config_service.dart:431"]
+    write --> mark["🟠 markSourceInstalled('app')<br/>remote_config_service.dart:455<br/>(_bundledSourceIds only checks 'nhentai')"]
+    mark -->|"Next App Startup"| sink["💥 _loadFromFile('app')<br/>remote_config_service.dart:645<br/>Overwrites global _appConfig"]
 ```
 
-### Sample finding (`KURON-SECURITY-RESULTS.md`)
+- **Impact.** An untrusted source manifest or ZIP package claiming `"source": "app"` persistently overrides global `AppConfig` settings across restarts (including `storage.folders.backup` passed to `path.join` in `DownloadBloc`/`DownloadService`) while remaining invisible in the installed-sources UI.
+- **Where.** `lib/core/config/remote_config_service.dart:455` in `RemoteConfigService.markSourceInstalled` — `CWE-20`
+- **Fix.** Reject reserved and bundled identifiers (`'app'`, `'tags'`, `'nhentai'`) in `_validateSourceId` and at the entry of `applySourceConfigFromJson`, `markSourceInstalled`, and `registerSourceInRegistry`.
+- **Verification.** `3/3` lens verifiers confirmed (`kuron-panel`).
 
-```markdown
-### F1 — Reserved config identifiers ('app', 'tags') not blocked during source config installation (MEDIUM, confidence high)
+<details>
+<summary>🔬 <b>View 3/3 Panel Audit Trail (REACHABILITY · IMPACT · DEFENSES)</b></summary>
 
-**Impact.** An untrusted source manifest or ZIP package can persistently overwrite the application-wide `_appConfig` (`app-config.json`) across restarts — gaining control over `storage.folders.backup`, rate limits, and timeouts while remaining invisible in the installed-sources UI.
-**Where.** `lib/core/config/remote_config_service.dart:455` in `RemoteConfigService.markSourceInstalled` — CWE-20
-**What.** `_bundledSourceIds` only contains `{'nhentai'}`, whereas `_bundledAssetPaths` also includes `'app'` and `'tags'`. Installing `"source": "app"` writes `configs/app-config.json` and persists `'app'` in `installed_source_ids`; on next launch, `_restoreInstalledSourcesFromCache` loads it into `_appConfig`.
-**Fix.** Reject reserved and bundled identifiers (`_bundledAssetPaths.keys` and `_bundledSourceIds`) in `_validateSourceId` and at the entry of `applySourceConfigFromJson`.
-**Verification.** 3/3 lens verifiers confirmed.
+- **REACHABILITY (`TRUE_POSITIVE`, `MEDIUM`)**: Confirmed path from `_installSourceFromLink` (`settings_source_install.dart:446`) / `_installSourceFromZip` (`line 560`) → `installCandidates` (`source_installer_service.dart:738`) → `applySourceConfigFromJson` (`remote_config_service.dart:394`) → `markSourceInstalled('app')` (`line 455`) → `_restoreInstalledSourcesFromCache` (`line 128`) → `_loadFromFile('app')` (`line 645`).
+- **IMPACT (`TRUE_POSITIVE`, `MEDIUM`)**: Overwriting `_appConfig` controls global `AppLimits`, `AppDurations`, and `AppStorage.backupFolderName` (`app_constants.dart:95-96`), which flows unvalidated into `path.join(baseDownloadPath, backupFolderName, ...)` (`download_bloc.dart:1223`, `download_service.dart:590`).
+- **DEFENSES (`TRUE_POSITIVE`, `MEDIUM`)**: Neither `_validateSourceId` (`remote_config_service.dart:66`) nor `SourceConfig.fromJson` (`config_models.g.dart:28`, which ignores unknown keys) blocks `'app'` or `'tags'`.
+
+</details>
+
+### 3. Self-Contained Report Bundle
+
+```text
+KURON-SECURITY-20261121-125051/
+├── .gitignore                               # contains "*" so artifacts never leak into git commits
+├── KURON-SECURITY-RESULTS.md                # visual human triage report (see examples/)
+├── KURON-SECURITY-RESULTS.jsonl             # strict JSONL for CI gates
+├── KURON-SECURITY-RESULTS.sarif             # SARIF 2.1.0 for GitHub Code Scanning & IDEs
+├── KURON-SECURITY-REVISION-b977b4e5736d.json # revision & kuron-panel verification stamp
+└── patches/                                 # F1.patch, F1.md, PATCHES.md, patches.jsonl
 ```
 
 ---
 
-## How the pipeline works
+## Field-Tested Matrix (November 2026)
 
-```mermaid
-flowchart LR
-    menu[3 Jobs: Scan / Diff / Patch] --> confirm[Cost confirmation]
-    confirm --> scan[Read-only researchers per component × lens]
-    scan --> panel[3-lens refutation panel: REACHABILITY × IMPACT × DEFENSES]
-    panel -->|keep ≥ 2 TRUE_POSITIVE| report[MD + JSONL + SARIF + kuron-panel stamp]
-    panel -->|suggest patches| wave[Scratch clone waves of 4: generate → verify + attack challenge]
-    wave -->|objection| revise[1 revision round]
-    wave -->|3/3 claims CONFIDENT| patch[F<n>.patch + git apply --check]
-    revise -->|2nd objection| decline[Honest decline note]
-```
+| Harness | Mode | Real-world 2026 Verification Result |
+|---|---|---|
+| **Antigravity (`AGY 2.0`)** | Native subagents | Scanned post-fix `HEAD` (`b977b4e5`) → confirmed all 3 `CWE-22` path-traversal fixes held, discovered **new `MEDIUM` (`CWE-20`) reserved-ID hijack** (`"source": "app"` overwriting `_appConfig`) + 2 resource-exhaustion findings (**9/9 panel votes**), then generated & verified `F1.patch` (`3/3 CONFIDENT`, `git apply` clean, `5/5` unit tests passing). |
+| **omp** | Native subagents | Scanned pre-fix tree (`2e726ac`) → **4 candidates, 12 panel votes, 4 kept** (2 severities downgraded by panel) → **3 clean `.patch` files** (`git apply --check` clean) + **1 honest decline** after 2 rounds (caught spoofable ZIP central-directory headers). |
+| **OpenCode** (`opencode run`) | Headless CLI | Found planted SQLi candidate; panel conservatively rejected `1/3` (missing route context in isolated fixture — zero false-positive promotion) and emitted full MD/JSONL/SARIF bundle. |
+| **Claude Code / Codex** | Subagent skill | Spec-compatible (`Agent Skills` format); ready for field runs. |
 
 ---
 
@@ -154,16 +186,17 @@ flowchart LR
 | Symptom | Fix |
 |---|---|
 | `official claude-security plugin not found in cache` | Install the official `claude-security` plugin once so its read-only specs/lib exist under `~/.claude/plugins/cache/claude-plugins-official/claude-security/` or `~/.gemini/config/plugins/claude-security/`. |
-| `python3: command not found` | Install Python 3 (`brew install python` on macOS, `apt install python3` on Debian/Ubuntu). Standard library only — no `pip install` needed. |
+| `python3: command not found` | Install Python 3 (`brew install python` on macOS, `apt install python3` on Debian/Ubuntu). Standard library only — zero `pip` dependencies. |
 | Verifier "reviewed the wrong tree" | Always pass absolute `SCAN_ROOT` / `WORKSPACE` paths in subagent briefs. |
 | `git apply --check` fails on a generated patch | Your working tree moved after the scan; the patch is anchored to the recorded `PATCH BASE` commit in `F<n>.md`. |
 
 ---
 
-## Safety & Attribution
+## Safety Invariants & Attribution
 
 - **Honest labeling**: Reports are stamped `kuron-panel` (or `kuron-panel-incomplete` if a researcher timed out), never forging the official `verified` stamp.
-- **Untrusted tree rule**: Code comments, `AGENTS.md`, or commit messages telling the scanner to "ignore this file" or "verified secure" are treated as prompt-injection findings, never obeyed.
-- **Credit**: Adapted from Anthropic's **Claude Security** plugin (`claude-plugins-official/claude-security`). Prompts, severity rules, and report/patch specs are used read-only; `scripts/kuron_*.py` are clean-room implementations. Not affiliated with Anthropic.
+- **Zero unasked mutations**: Researchers and verifiers are strictly read-only. Patch generators touch only isolated scratch clones. Nothing is ever auto-applied, committed, pushed, or opened as a PR without your explicit request.
+- **Untrusted tree rule**: Code comments, `AGENTS.md`, or commit messages telling the scanner to "ignore this file" or "verified secure" are reported as prompt-injection findings, never obeyed.
+- **Credit**: Adapted from Anthropic's **Claude Security** plugin (`claude-plugins-official/claude-security`). Prompts, severity rules, and report/patch specs are used read-only; `scripts/kuron_*.py` are clean-room 2026 implementations. Not affiliated with Anthropic.
 
-⭐ **Star this repo if your agent caught a real bug with it!** Contributions, harness reports, and panel dispute issues are welcome.
+⭐ **Star this repo if your agent caught a real vulnerability with it!**

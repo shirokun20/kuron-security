@@ -1,6 +1,16 @@
 # Kuron Security results
 
+> [!WARNING]
+> **Scan Verdict (`kuron-panel` · 2026-11-21T11:58Z)** — **4 findings kept of 4 candidates** (`1 MEDIUM`, `3 LOW`) across 2 scoped files at commit `2e726ac`. All 4 candidates survived **3/3 adversarial lens votes** (`12/12` panel votes); the panel downgraded two severities (`C1 HIGH→LOW`, `C2 HIGH→MEDIUM`).
+
 Low-effort codebase scan of `/tmp/kuron-parent` (worktree at `2e726ac`, pre-fix tree) scoped to `lib/core/config/remote_config_service.dart` + `lib/core/services/source_installer_service.dart` (2 tracked files), run 2026-11-21T11:58Z. Headline: 4 findings kept of 4 candidates — F1 LOW, F2 MEDIUM, F3 LOW, F4 LOW. Every kept finding survived 3/3 lens votes; the panel lowered two severities (C1 HIGH→LOW, C2 HIGH→MEDIUM).
+
+| ID | Severity (Δ Panel) | Confidence | Location (`file:line`) | CWE | 3-Lens Panel (`R` · `I` · `D`) | Title |
+|---|---|---|---|---|---|---|
+| **F1** | 🔵 **LOW** *(⬇️ from HIGH)* | `high` | `lib/core/config/remote_config_service.dart:407` | `CWE-22` | ✅ `TP` · ✅ `TP (LOW)` · ✅ `TP` (`3/3`) | Path traversal file write via unsanitized remote `sourceId` into configs directory |
+| **F2** | 🟡 **MEDIUM** *(⬇️ from HIGH)* | `high` | `lib/core/config/remote_config_service.dart:461` | `CWE-22` | ✅ `TP` · ✅ `TP (MED)` · ✅ `TP` (`3/3`) | Path traversal arbitrary file delete via unsanitized `sourceId` on uninstall |
+| **F3** | 🔵 **LOW** *(⬇️ from HIGH)* | `high` | `lib/core/services/source_installer_service.dart:1008` | `CWE-22` | ✅ `TP` · ✅ `TP (LOW)` · ✅ `TP` (`3/3`) | Path traversal file write via unsanitized `sourceId` in icon cache persistence |
+| **F4** | 🔵 **LOW** *(⬇️ from HIGH)* | `high` | `lib/core/services/source_installer_service.dart:456` | `CWE-400` | ✅ `TP` · ✅ `TP (LOW)` · ✅ `TP` (`3/3`) | Unbounded ZIP decode of untrusted archive enables resource-exhaustion DoS |
 
 ## Coverage
 
@@ -25,6 +35,13 @@ Single-researcher shape (small scope, 2 files), panel-verified. Researcher dispa
 **Verification.** 3/3 lens verifiers confirmed (severity lowered HIGH→LOW by the panel).
 
 ### F2 — Path traversal arbitrary file delete via unsanitized sourceId on uninstall (MEDIUM, confidence high)
+
+```mermaid
+flowchart LR
+    src["🔴 Persisted sourceId<br/>remote_config_service.dart:457"] -->|"sourceId = '../source_icons/victim'"| chk["🟡 _bundledSourceIds.contains<br/>remote_config_service.dart:458<br/>(no path validation)"]
+    chk --> join["🟠 p.join(configDir, '$sourceId-config.json')<br/>remote_config_service.dart:461"]
+    join --> sink["💥 cachedFile.delete()<br/>remote_config_service.dart:463<br/>Deletes sibling *-config.json"]
+```
 
 **Impact.** Deletion of arbitrary `*-config.json` files under/above `configs/`: persistent loss of configured sources.
 

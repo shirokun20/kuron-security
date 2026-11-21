@@ -1,1 +1,1 @@
-{"description": "Claude Security scans (codebase, changes, patches) for sessions without the Workflow tool. Kuron Security adaptation with kuron-panel verification.", "name": "kuron-security", "version": "1.1.0"}
+{"description": "Claude Security scans (codebase, changes, patches) for 2026 AI agent harnesses without the Workflow tool. Kuron Security adaptation with kuron-panel verification, visual scorecards, and Mermaid source-to-sink attack graphs.", "name": "kuron-security", "version": "1.2.0"}
