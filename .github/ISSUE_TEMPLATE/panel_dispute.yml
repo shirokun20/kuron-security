@@ -1,0 +1,32 @@
+name: ⚖️ Panel dispute
+description: A verifier verdict or severity call looks wrong
+title: "[panel]: "
+labels: [panel]
+body:
+  - type: input
+    id: finding
+    attributes:
+      label: Finding id
+      description: F-number from the report
+      placeholder: F2
+    validations:
+      required: true
+  - type: dropdown
+    id: dispute
+    attributes:
+      label: What do you dispute?
+      options: [false-positive, false-negative, severity-too-high, severity-too-low, missed-attack-path]
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Decisive file:line
+      description: The code line that settles it (never paste secrets)
+    validations:
+      required: true
+  - type: textarea
+    id: panel
+    attributes:
+      label: Panel votes
+      description: Paste the 3 lens votes from panel.json

@@ -1,0 +1,25 @@
+name: 🔌 Harness support
+description: Make install.sh or the skill work on another harness/version
+title: "[harness]: "
+labels: [harness]
+body:
+  - type: input
+    id: harness
+    attributes:
+      label: Harness
+      placeholder: antigravity 1.x
+    validations:
+      required: true
+  - type: input
+    id: skillsdir
+    attributes:
+      label: Skills directory it reads
+      description: Where this harness loads Agent Skills from
+      placeholder: ~/.config/x/skills
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: What works, what fails, docs links
