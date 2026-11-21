@@ -17,7 +17,7 @@ official shape (Markdown, JSONL, SARIF, revision stamp) with honestly-labeled
 > `scripts/kuron_*.py` are clean-room implementations. This project is not
 > affiliated with Anthropic.
 
-- [Install](#install) · [What you get](#what-you-get) · [How it works](#how-it-works) · [Harness notes](#harness-notes) · [Troubleshooting](#troubleshooting) · [Honest limits](#honest-limits) · [Contribute](#contribute)
+- [Install](#install) · [Field-tested on](#field-tested-on) · [What you get](#what-you-get) · [How it works](#how-it-works) · [Harness notes](#harness-notes) · [Troubleshooting](#troubleshooting) · [Honest limits](#honest-limits) · [Contribute](#contribute)
 
 ## Install
 
@@ -45,6 +45,13 @@ No `pip` dependencies — both scripts are Python-3 stdlib only (and the
 official plugin already requires `python3`, so nothing new is asked of the
 machine). Windows: run from Git Bash (ships with Git, which the patch job
 requires anyway).
+
+| Harness | Mode | Result |
+|---|---|---|
+| omp | native | Full loop: 4 real findings → 12 panel votes → 4 kept → 3 patches (`git apply --check` clean) + 1 honest decline after 2 valid objections |
+| OpenCode (`opencode run`) | headless | Full loop on a planted SQLi file: candidate found, panel rejected 1/3 (no route context — conservative by design), MD/JSONL/SARIF 2.1.0 + stamp produced |
+| Antigravity (`agy -p`) | headless | Skill discovered, fixed confirmation quoted verbatim; full scan not yet run there |
+| Claude Code / Codex | — | Spec-compatible layout, awaiting a field run (contributions welcome) |
 
 ## What you get
 
