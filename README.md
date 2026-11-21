@@ -34,7 +34,7 @@
 ### Option A — Universal 1-liner via `skills.sh` (installs to 20+ agents)
 
 ```bash
-npx skills add shirokun20/kuron-security -g -y
+npx skills add shirokun20/kuron-security --skill kuron-security -g -y
 ```
 
 Automatically detects and installs into **Antigravity, Claude Code, Codex, Cursor, OpenCode, Cline, Amp, Windsurf, Copilot, and 15+ other agents**.
@@ -46,22 +46,13 @@ Automatically detects and installs into **Antigravity, Claude Code, Codex, Curso
 /plugin install kuron-security@kuron-security
 ```
 
-### Option C — Git clone & `install.sh` (zero Node/npm required)
-
-```bash
-git clone https://github.com/shirokun20/kuron-security.git
-cd kuron-security
-./install.sh          # auto-links into every installed 2026 harness
-./install.sh --check  # verifies SKILL.md, python3 (stdlib only), git, and scripts
-```
-
 | Harness (2026) | Global / Workspace Target | Install Command |
 |---|---|---|
-| **Antigravity (AGY 2.0)** | `~/.gemini/config/skills` or `<repo>/.agents/skills` | `./install.sh` or `./install.sh --local` |
-| **omp** | `~/.agents/skills` | `./install.sh` |
-| **Claude Code** | `~/.claude/skills` (or `.claude-plugin/plugin.json`) | `./install.sh --harness claude-code` |
-| **Codex** | `~/.codex/skills` | `./install.sh --harness codex` |
-| **OpenCode** | `~/.config/opencode/skills` or `<repo>/.opencode/skills` | `./install.sh` or `./install.sh --local` |
+| **Antigravity (AGY 2.0)** | `~/.gemini/config/skills` or `<repo>/.agents/skills` | `npx skills add shirokun20/kuron-security -a antigravity` |
+| **omp** | `~/.agents/skills` | `npx skills add shirokun20/kuron-security -g` |
+| **Claude Code** | `~/.claude/skills` (or `.claude-plugin/plugin.json`) | `npx skills add shirokun20/kuron-security -a claude-code` |
+| **Codex** | `~/.codex/skills` | `npx skills add shirokun20/kuron-security -a codex` |
+| **OpenCode** | `~/.config/opencode/skills` or `<repo>/.opencode/skills` | `npx skills add shirokun20/kuron-security -a opencode` |
 
 ### Trigger prompts (copy & paste)
 
@@ -211,9 +202,9 @@ KURON-SECURITY-20261121-125051/
 
 ## Safety Invariants & Attribution
 
-- **Honest labeling**: Reports are stamped `kuron-panel` (or `kuron-panel-incomplete` if a researcher timed out), never forging the official `verified` stamp.
+- **Honest labeling**: Every scan and patch product is labeled `kuron-panel` (or `kuron-panel-incomplete` if a researcher timed out), never any `verified` or `panel-verified` stamp.
 - **Zero unasked mutations**: Researchers and verifiers are strictly read-only. Patch generators touch only isolated scratch clones. Nothing is ever auto-applied, committed, pushed, or opened as a PR without your explicit request.
-- **Untrusted tree rule**: Code comments, `AGENTS.md`, or commit messages telling the scanner to "ignore this file" or "verified secure" are reported as prompt-injection findings, never obeyed.
+- **Indirect prompt-injection quarantine**: All scanned code and diffs are fenced inside `<untrusted_repository_data>` delimiters with control characters stripped; repository text attempting to steer scanner behavior is flagged as a `CWE-74` finding and never executed.
 - **Credit**: Adapted from Anthropic's **Claude Security** plugin (`claude-plugins-official/claude-security`). Prompts, severity rules, and report/patch specs are used read-only; `scripts/kuron_*.py` are clean-room 2026 implementations. Not affiliated with Anthropic.
 
 ⭐ **Star this repo if your agent caught a real vulnerability with it!**

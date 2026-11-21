@@ -176,7 +176,7 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
         c = u["claims"]
         header = [
             f"# Patch for {fid}: {u.get('title','')}",
-            "# Trust label: verified by a panel of agents (independent verifier plus a fresh reviewer challenging the diff).",
+            "# Trust label: kuron-panel (reviewed by an independent patch reviewer plus a fresh diff challenger; not the official verified stamp).",
             f"# TARGETED ({c['targeted']['evidence']})",
             f"# NO_NEW_VULNERABILITY ({c['no_new_vulnerability']['evidence']})",
             f"# BEHAVIOUR_UNCHANGED ({c['behaviour_unchanged']['evidence']})",
@@ -199,7 +199,7 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
             f"# {fid} — patch",
             "",
             f"Summary: {u.get('summary','')}",
-            f"Trust: verified by a panel of agents."
+            f"Trust: kuron-panel (independent patch reviewer + diff challenger)."
             + (" Review-only: no covering test." if u.get("untested") else ""),
             f"Tests: {u.get('tests_run','')}",
             f"Reviewed paths: {', '.join(u.get('reviewed_paths', []))}",
@@ -219,7 +219,7 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
     for u in units:
         if u["status"] == "patch_written":
             index.append(
-                f"- {u['id']}: patch written (panel-verified"
+                f"- {u['id']}: patch written (kuron-panel"
                 + (", review-only: no covering test" if u.get("untested") else "")
                 + f") — {u.get('title','')}"
             )

@@ -106,7 +106,7 @@ def main() -> None:
     # The log shape is built on the official plugin's lib; the producer is us.
     log["runs"][0]["tool"]["driver"]["name"] = "Kuron Security"
     log["runs"][0]["tool"]["driver"].pop("organization", None)
-    log["runs"][0]["tool"]["driver"]["informationUri"] = "https://skills.omp.sh"
+    log["runs"][0]["tool"]["driver"].pop("informationUri", None)
     with open(os.path.join(report_dir, "KURON-SECURITY-RESULTS.sarif"), "w") as fh:
         json.dump(log, fh, indent=2)
         fh.write("\n")

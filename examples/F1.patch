@@ -1,5 +1,5 @@
 # Patch for F1: Path traversal file write via unsanitized remote sourceId into configs directory
-# Trust label: verified by a panel of agents (independent verifier plus a fresh reviewer challenging the diff).
+# Trust label: kuron-panel (reviewed by an independent patch reviewer plus a fresh diff challenger; not the official verified stamp).
 # TARGETED (helper _cachedSourceFile used only at the 3 file-path sinks: remote_config_service.dart:424 (write), :478 (delete), :620 (restore))
 # NO_NEW_VULNERABILITY (allowlist ^[A-Za-z0-9_-]{1,64}$ + p.normalize + p.isWithin contain at :380-393; remaining $sourceId uses are prefs keys/log strings, no new File/write sink)
 # BEHAVIOUR_UNCHANGED (legit ids pass through identical '$sourceId-config.json' path; only invalid ids now throw FormatException (write/delete) or skip+continue (restore :621-623))

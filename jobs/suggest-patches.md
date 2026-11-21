@@ -119,7 +119,7 @@ Present a scannable **Visual Patch Scorecard** followed by details:
    | ID | Status | Attempts | 3-Claim Gate (`TARGETED` / `NO_NEW_VULN` / `BEHAVIOUR`) | Coverage | `git apply --check` | Apply Command / Decline Reason |
    |---|---|---|---|---|---|---|
 3. **Narrative Details**:
-   Which findings got a patch (panel-of-agents trust label — never "tested"; flag review-only `untested` plainly), which declined after how many attempts and what blocked each, not-confirmed stated as such, set-aside weaknesses in one line, folder path with `PATCHES.md` as index, stale-file removals named. End with exactly: "Want me to apply any of these, or open a pull request for one? Just ask."
+   Which findings got a patch (`kuron-panel` trust label — never `verified`, `panel-verified`, or `tested`; flag review-only `untested` plainly), which declined after how many attempts and what blocked each, not-confirmed stated as such, set-aside weaknesses in one line, folder path with `PATCHES.md` as index, stale-file removals named. End with exactly: "Want me to apply any of these, or open a pull request for one? Just ask."
 
 ## Nothing to patch
 
