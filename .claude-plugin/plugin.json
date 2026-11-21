@@ -1,1 +1,1 @@
-{"description": "Claude Security scans (codebase, changes, patches) for sessions without the Workflow tool. Kuron Security adaptation with kuron-panel verification.", "name": "kuron-security", "version": "1.0.0"}
+{"description": "Claude Security scans (codebase, changes, patches) for sessions without the Workflow tool. Kuron Security adaptation with kuron-panel verification.", "name": "kuron-security", "version": "1.1.0"}
