@@ -163,8 +163,7 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
         c = u["claims"]
         header = [
             f"# Patch for {fid}: {u.get('title','')}",
-            "# Trust label: verified by a panel of agents (independent verifier "
-            "# plus a fresh reviewer challenging the diff).",
+            "# Trust label: verified by a panel of agents (independent verifier plus a fresh reviewer challenging the diff).",
             f"# TARGETED ({c['targeted']['evidence']})",
             f"# NO_NEW_VULNERABILITY ({c['no_new_vulnerability']['evidence']})",
             f"# BEHAVIOUR_UNCHANGED ({c['behaviour_unchanged']['evidence']})",
