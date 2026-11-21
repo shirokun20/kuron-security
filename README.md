@@ -3,77 +3,59 @@
 [![MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Agent Skills](https://img.shields.io/badge/agent--skills-compatible-blue)](https://agentskills.io)
 [![Release](https://img.shields.io/github/v/release/shirokun20/kuron-security)](https://github.com/shirokun20/kuron-security/releases)
-[![Harnesses](https://img.shields.io/badge/harness-omp_%7C_claude_code%7C_codex%7C_opencode%7C_antigravity-purple)](#install)
 
-**Claude Security scans — on any AI agent.** Codebase scan, scan changes, and
-suggest patches, with a parallel researcher + 3-lens verifier panel, for
-sessions that don't have Claude Code's `Workflow` tool. Reports keep the
-official shape (Markdown, JSONL, SARIF, revision stamp) with honestly-labeled
-`kuron-panel` verification.
+Claude Security jobs (codebase scan, scan changes, suggest patches) for AI
+agents **without** Claude Code's `Workflow` tool. Same menu, same safety
+rules, same report shape — engine replaced with subagents your harness
+already has. Stamped `kuron-panel`, never `verified`.
 
-> Credit: adapted from Anthropic's **Claude Security** plugin
-> (`claude-plugins-official/claude-security`). Prompts, severity scale and
-> report/patch shapes are used read-only from the official plugin;
-> `scripts/kuron_*.py` are clean-room implementations. This project is not
-> affiliated with Anthropic.
-
-- [Install](#install) · [Field-tested on](#field-tested-on) · [What you get](#what-you-get) · [How it works](#how-it-works) · [Harness notes](#harness-notes) · [Troubleshooting](#troubleshooting) · [Honest limits](#honest-limits) · [Contribute](#contribute)
+> Adapted from Anthropic's **Claude Security** plugin; prompts and shapes
+> used read-only, `scripts/kuron_*.py` are clean-room. Not affiliated.
 
 ## Install
 
 ```bash
 git clone https://github.com/shirokun20/kuron-security.git
-cd kuron-security
-./install.sh              # symlinks into every harness it finds
-./install.sh --check      # verify: skill file, python3, git
+cd kuron-security && ./install.sh   # symlinks into every harness found
 ```
 
-Per-harness, pick what you need:
+| Harness | Target | Command |
+|---|---|---|
+| omp / generic | `~/.agents/skills` | `./install.sh` (auto) |
+| Claude Code | `~/.claude/skills` | `./install.sh --harness claude-code` (or install as plugin via `.claude-plugin/plugin.json`) |
+| Codex | `~/.codex/skills` | `./install.sh --harness codex` |
+| OpenCode | project `.opencode/skills` | `./install.sh --local` inside your repo |
+| Antigravity | project `.agents/skills` | `./install.sh --local` inside your repo |
 
-```bash
-./install.sh --harness claude-code   # ~/.claude/skills/kuron-security
-./install.sh --harness codex         # ~/.codex/skills/kuron-security
-./install.sh --harness omp           # ~/.agents/skills/kuron-security
-./install.sh --harness opencode      # project .opencode/skills (run inside your repo)
-./install.sh --harness antigravity   # project .agents/skills (run inside your repo)
-./install.sh --local                 # project-local install for the current repo
-./install.sh --uninstall             # remove all links this script made
-./install.sh --list                  # show what's installed where
-```
+`./install.sh --check` verifies skill + python3 + git. No `pip` deps
+(stdlib only). Windows: use Git Bash.
 
-No `pip` dependencies — both scripts are Python-3 stdlib only (and the
-official plugin already requires `python3`, so nothing new is asked of the
-machine). Windows: run from Git Bash (ships with Git, which the patch job
-requires anyway).
+## Field-tested on
 
 | Harness | Mode | Result |
 |---|---|---|
-| omp | native | Full loop: 4 real findings → 12 panel votes → 4 kept → 3 patches (`git apply --check` clean) + 1 honest decline after 2 valid objections |
-| OpenCode (`opencode run`) | headless | Full loop on a planted SQLi file: candidate found, panel rejected 1/3 (no route context — conservative by design), MD/JSONL/SARIF 2.1.0 + stamp produced |
-| Antigravity (`agy -p`) | headless | Skill discovered, fixed confirmation quoted verbatim; full scan not yet run there |
-| Claude Code / Codex | — | Spec-compatible layout, awaiting a field run (contributions welcome) |
+| omp | native | 4 real findings → 12 panel votes → 4 kept → 3 patches (`git apply --check` clean) + 1 honest decline |
+| OpenCode (`opencode run`) | headless | Planted SQLi: candidate found, panel rejected 1/3 (no route context — conservative by design), full MD/JSONL/SARIF produced |
+| Antigravity (`agy -p`) | headless | Skill discovered, confirmation quoted verbatim; full scan not yet run |
+| Claude Code / Codex | — | Spec-compatible, awaiting a field run |
 
 ## What you get
 
 ```
-KURON-SECURITY-20261121-115809/
-├── KURON-SECURITY-RESULTS.md      # human report (see examples/)
-├── KURON-SECURITY-RESULTS.jsonl   # one finding per line (CI gates)
-├── KURON-SECURITY-RESULTS.sarif   # dashboards & IDE viewers
-├── KURON-SECURITY-REVISION-*.json # stamp: kuron-panel, never "verified"
-└── patches/
-    ├── F1.patch  F1.md  …        # panel-verified patches, apply when YOU choose
-    └── PATCHES.md                 # index + trust labels
+KURON-SECURITY-<ts>/
+├── KURON-SECURITY-RESULTS.md       # human report (see examples/)
+├── KURON-SECURITY-RESULTS.jsonl    # CI gates
+├── KURON-SECURITY-RESULTS.sarif    # dashboards & IDEs
+├── KURON-SECURITY-REVISION-*.json  # stamp: kuron-panel
+└── patches/                        # F<n>.patch + F<n>.md + PATCHES.md
 ```
 
-Real output from the field test ([examples/](examples/)):
-
 ```markdown
-### F1 — Path traversal file write via unsanitized remote sourceId (LOW, high)
+### F1 — Path traversal file write via unsanitized sourceId (LOW, high)
 
 **Impact.** Attacker-controlled JSON persisted outside `configs/` …
 **Where.** `remote_config_service.dart:407` — CWE-22
-**Verification.** 3/3 lens verifiers confirmed (severity lowered HIGH→LOW).
+**Verification.** 3/3 lens verifiers confirmed (HIGH→LOW by the panel).
 ```
 
 ## How it works
@@ -90,46 +72,22 @@ flowchart LR
     revise -->|2nd objection| decline[Honest decline]
 ```
 
-Ask your agent: *"scan this repo with kuron-security"*, *"review my branch
-changes"*, or *"suggest patches for F1, F3"*. One scoped question, one fixed
-confirmation, then it works unattended in waves.
-
-## Harness notes
-
-| Harness | Skills dir | Notes |
-|---|---|---|
-| omp / generic agents | `~/.agents/skills/kuron-security` | built & tested here |
-| Claude Code | `~/.claude/skills/kuron-security` | or install as plugin via `.claude-plugin/plugin.json` |
-| Codex | `~/.codex/skills/kuron-security` | spec-compatible |
-| OpenCode | project `.opencode/skills/` or `~/.config/opencode/skills/` | run `./install.sh --local` inside your repo |
-| Antigravity | project `.agents/skills/` | run `./install.sh --local` inside your repo |
-
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
 | `python3: command not found` | Install Python 3 (macOS: `brew install python`; Debian: `apt install python3`) |
-| `omp skill publish` → frontmatter error | Fixed in v1.0.0 (quoted description); pull latest |
-| Verifier "reviewed the wrong tree" | Known subagent limitation; the skill anchors briefs to absolute `WORKSPACE` paths — paste the diff, never rely on its shell |
-| Patch job refuses `repo-root is not a repository top level` | Use the real path (`realpath`); symlinked `/tmp` on macOS is resolved since v1.0.0 |
-| `git apply` check fails on a patch | Tree moved under the patch; the patch still stands (built at recorded PATCH BASE) |
+| `omp skill publish` frontmatter error | Fixed in v1.0.0 (quoted description); pull latest |
+| Verifier "reviewed the wrong tree" | Anchor briefs to absolute `WORKSPACE` paths; never rely on the subagent's shell |
+| `git apply` check fails on a patch | Tree moved under the patch; it still stands (built at recorded PATCH BASE) |
 
 ## Honest limits
 
-- Verification is `kuron-panel`, never the official `verified` stamp (that
-  calibration belongs to Anthropic's Workflow pipeline — forging it would be
-  fabrication).
-- `high` effort at full-repo scale and no-finding patch runs are implemented
-  but await field tests with real findings. The engine refuses to invent
-  findings to test itself.
+- `kuron-panel`, never the official `verified` stamp (forging it is fabrication).
+- `high` at full-repo scale and no-finding patch runs await field tests.
 - Nothing auto-applies, commits, pushes, or opens PRs. Ever.
 
-## Contribute
+Contribute: issues have templates (bug / panel dispute / harness). PRs keep
+the safety invariants untouched and field-test on a real scope.
 
-Field reports welcome: new harness paths for `install.sh`, verifier edge
-cases, SARIF consumer fixes. Open an issue with your harness + transcript
-snippet (templates provided); PRs must keep the safety invariants untouched
-and field-test on a real scope.
-
-⭐ Star it if your agent found a real bug with it — that signal matters more
-than any badge.
+⭐ Star it if your agent found a real bug with it.
