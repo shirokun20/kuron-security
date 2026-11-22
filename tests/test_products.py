@@ -1,3 +1,5 @@
+import contextlib
+import io
 import json
 import os
 import tempfile
@@ -46,7 +48,12 @@ class ProductsTest(unittest.TestCase):
             (report / "scan-meta.json").write_text(
                 json.dumps({"mode": "scan", "label": "ad-hoc-panel"}), encoding="utf-8"
             )
-            main(str(report), os.getcwd())
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                main(str(report), os.getcwd())
+            stdout = buf.getvalue()
+            self.assertIn("╭─", stdout)
+            self.assertIn("SCAN SCORECARD", stdout)
             names = set(os.listdir(report))
             self.assertIn("KURON-SECURITY-RESULTS.md", names)
             self.assertIn("KURON-SECURITY-RESULTS.jsonl", names)

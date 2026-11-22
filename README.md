@@ -12,7 +12,7 @@
 > ```text
 > The scan pipeline is unavailable in this session (it needs the Workflow tool)...
 > ```
-> **Kuron Security** replaces that locked engine with waves of standard subagents your 2026 harness already has (**Antigravity 2.0**, **omp**, **OpenCode**, **Codex**, **Claude Code**). Same three jobs, same official researcher/verifier prompts, same report & SARIF 2.1.0 shapes — plus **visual scorecards**, **Mermaid source-to-sink attack graphs**, and **collapsible 3-lens panel audit trails**, honestly stamped `kuron-panel`.
+> **Kuron Security** replaces that locked engine with waves of standard subagents your 2026 harness already has (**Antigravity 2.0**, **omp**, **OpenCode**, **Codex**, **Claude Code**, **muse**). Baseline briefs are vendored clean-room in `agents/` (official briefs are optional when available), with capability probing, taint-chain evidence contracts, **visual scorecards**, **Mermaid source-to-sink attack graphs**, and **honest provenance labels** (`kuron-panel`, `ad-hoc-panel`, `unverified-single-pass`).
 
 ---
 
@@ -222,7 +222,7 @@ KURON-SECURITY-20261121-125051/
 ├── KURON-SECURITY-RESULTS.md                # visual human triage report (see examples/)
 ├── KURON-SECURITY-RESULTS.jsonl             # strict JSONL for CI gates
 ├── KURON-SECURITY-RESULTS.sarif             # SARIF 2.1.0 for GitHub Code Scanning & IDEs
-├── KURON-SECURITY-REVISION-b977b4e5736d.json # revision & kuron-panel verification stamp
+├── KURON-SECURITY-REVISION-b977b4e5736d.json # revision & honest provenance verification stamp
 └── patches/                                 # F1.patch, F1.md, PATCHES.md, patches.jsonl
 ```
 
@@ -243,7 +243,7 @@ KURON-SECURITY-20261121-125051/
 
 | Symptom | Fix |
 |---|---|
-| `official claude-security plugin not found in cache` | Install the official `claude-security` plugin once so its read-only specs/lib exist under `~/.claude/plugins/cache/claude-plugins-official/claude-security/` or `~/.gemini/config/plugins/claude-security/`. |
+| Official `claude-security` plugin not in cache | Optional in v2.0.0: `agents/` provides vendored clean-room baseline briefs and `kuron_products.py` includes a built-in SARIF 2.1.0 fallback; install the official plugin only if you want `kuron-panel` parity. |
 | `python3: command not found` | Install Python 3 (`brew install python` on macOS, `apt install python3` on Debian/Ubuntu). Standard library only — zero `pip` dependencies. |
 | Verifier "reviewed the wrong tree" | Always pass absolute `SCAN_ROOT` / `WORKSPACE` paths in subagent briefs. |
 | `git apply --check` fails on a generated patch | Your working tree moved after the scan; the patch is anchored to the recorded `PATCH BASE` commit in `F<n>.md`. |
@@ -252,9 +252,9 @@ KURON-SECURITY-20261121-125051/
 
 ## Safety Invariants & Attribution
 
-- **Honest labeling**: Every scan and patch product is labeled `kuron-panel` (or `kuron-panel-incomplete` if a researcher timed out), never any `verified` or `panel-verified` stamp.
+- **Honest labeling**: Every scan and patch product carries an honest provenance label (`kuron-panel`, `ad-hoc-panel`, or `unverified-single-pass`, plus `untested` on untested patches), never any `verified` or `panel-verified` stamp.
 - **Zero unasked mutations**: Researchers and verifiers are strictly read-only. Patch generators touch only isolated scratch clones. Nothing is ever auto-applied, committed, pushed, or opened as a PR without your explicit request.
 - **Indirect prompt-injection quarantine**: All scanned code and diffs are fenced inside `<untrusted_repository_data>` delimiters with control characters stripped; repository text attempting to steer scanner behavior is flagged as a `CWE-74` finding and never executed.
-- **Credit**: Adapted from Anthropic's **Claude Security** plugin (`claude-plugins-official/claude-security`). Prompts, severity rules, and report/patch specs are used read-only; `scripts/kuron_*.py` are clean-room 2026 implementations. Not affiliated with Anthropic.
+- **Credit**: Baseline briefs are vendored clean-room in `agents/` (with official `claude-plugins-official/claude-security` briefs optional when present); `scripts/kuron_*.py` are clean-room 2026 implementations. Not affiliated with Anthropic.
 
 ⭐ **Star this repo if your agent caught a real vulnerability with it!**

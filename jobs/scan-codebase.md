@@ -60,4 +60,5 @@ stated as an assumption). Large tree: recommend scoped first.
    checks via `scripts/kuron_trace.py`.
 9. Redact (`agents/redactor.md` -> `redaction.json`) and deliver all 4 mandatory
    artifacts via `scripts/kuron_products.py <report dir> <scan root>` (enforces
-   fail-closed redaction via `scripts/kuron_redaction.py`).
+   fail-closed redaction via `scripts/kuron_redaction.py` and prints the
+   open-rail `KURON SECURITY · SCAN SCORECARD`).

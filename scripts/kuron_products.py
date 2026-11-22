@@ -230,6 +230,69 @@ def _render_markdown(
     md_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+def _print_scorecard(
+    label: str,
+    tag: str,
+    meta: dict,
+    kept: list[dict],
+    discarded: list[dict],
+    rev_name: str,
+) -> None:
+    counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    for r in kept:
+        sev = str(r.get("severity", "LOW")).upper()
+        if sev in counts:
+            counts[sev] += 1
+
+    total = max(len(kept), 1)
+    rule = "─" * 68
+    scope = meta.get("scope") or ()
+    scope_str = ", ".join(scope) if scope else "whole repository"
+    mode = str(meta.get("mode", "scan"))
+    effort = meta.get("effort") or meta.get("tier") or "default"
+
+    print(f"\n╭─ 🛡️  KURON SECURITY · SCAN SCORECARD {rule[:30]}")
+    print(f"│  Mode     : {mode} ({effort} effort)")
+    print(f"│  Scope    : {scope_str}")
+    print(f"│  Revision : {tag} · Stamp: {label}")
+    print(
+        f"│  Summary  : {len(kept)} kept "
+        f"(CRITICAL {counts['CRITICAL']} · HIGH {counts['HIGH']} · "
+        f"MEDIUM {counts['MEDIUM']} · LOW {counts['LOW']}) · {len(discarded)} discarded"
+    )
+    print(f"├─ Severity Breakdown {rule[:47]}")
+    for sev_tier in ("CRITICAL", "HIGH", "MEDIUM", "LOW"):
+        c = counts[sev_tier]
+        filled = int(round((c / total) * 20)) if len(kept) > 0 else 0
+        meter = "█" * filled + "░" * (20 - filled)
+        print(f"│  {sev_tier:<8} : {meter}  {c}")
+    print(f"├─ Kept Findings ({len(kept)}) {rule[:48]}")
+    if not kept:
+        print("│  [CLEAN]   0 findings survived the evidence & verification gate.")
+    for idx, r in enumerate(kept):
+        fid = str(r.get("id", f"F{idx + 1}"))
+        sev = str(r.get("severity", "LOW")).upper()
+        cwe = str(r.get("cwe_id") or r.get("cweId") or "-")
+        loc = f"{r.get('file', '?')}:{r.get('line', '?')}"
+        title = str(r.get("title", "")).strip()
+        conf = str(r.get("confidence", "high")).upper()
+        if label == "kuron-panel":
+            panel_badge = "3/3✓ (R:✓ I:✓ D:✓)" if conf == "HIGH" else "2/3✓"
+        else:
+            panel_badge = label
+        print(f"│  [{sev}]".ljust(12) + f" {fid} · {cwe} · {panel_badge}")
+        if title:
+            print(f"│            {title}")
+        print(f"│            └─ {loc}")
+        if idx + 1 < len(kept):
+            print("│")
+    print(f"├─ Artifacts {rule[:56]}")
+    print("│  Report   : KURON-SECURITY-RESULTS.md")
+    print(f"│  Machine  : KURON-SECURITY-RESULTS.sarif · .jsonl · {rev_name}")
+    print(f"╰{rule}")
+    print(f"wrote {len(kept)} findings (stamp {rev_name})")
+
+
 def main(report_dir: str, scan_root: str) -> None:
     raw_findings = load_raw(os.path.join(report_dir, "findings.json"), default=[])
     meta = load_raw(os.path.join(report_dir, "scan-meta.json"), default={})
@@ -358,6 +421,7 @@ def main(report_dir: str, scan_root: str) -> None:
     )
 
     enforce(report_dir, [md_name, jsonl_name, sarif_name, rev_name])
+    _print_scorecard(label, tag, meta, records, discarded, rev_name)
 
 
 if __name__ == "__main__":

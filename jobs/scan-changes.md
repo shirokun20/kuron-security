@@ -72,4 +72,5 @@ prints one, else "the N commits since <base>" + detached note.
    dedupe -> `C1..Cn`, recording dropped items in `discarded[]`. Run 3-lens panel
    (`agents/verifier-*.md`, logging checks via `scripts/kuron_trace.py`).
 6. Redact (`agents/redactor.md` -> `redaction.json`) and deliver all 4 mandatory
-   artifacts via `scripts/kuron_products.py <report dir> <scan root>`.
+   artifacts via `scripts/kuron_products.py <report dir> <scan root>` (enforces
+   fail-closed redaction and prints the open-rail `KURON SECURITY · SCAN SCORECARD`).

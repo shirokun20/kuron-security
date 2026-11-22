@@ -74,7 +74,7 @@ incomplete chains are dropped pre-panel and recorded in `discarded[]` with `disc
 5. 3-Lens Panel (`agents/verifier-reachability.md`, `verifier-impact.md`, `verifier-defenses.md`) — may only keep or **lower** severity, never raise
 6. `scripts/kuron_trace.py` → allowlisted read-only verification commands (`git show`, `git grep`, `grep`, `nl`, `sed -n`, `python3 -c`) logged with `exit_code` + `trace_id`
 7. Fail-closed Redaction (`agents/redactor.md` → `redaction.json`)
-8. `scripts/kuron_products.py <report dir> <scan root>` → renders all 4 mandatory artifacts (`KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, `KURON-SECURITY-REVISION-<tag>.json`) and calls `kuron_redaction.enforce` (fail-closed on missing `redaction.json`, `status != "clean"`, or `not cleaned:`)
+8. `scripts/kuron_products.py <report dir> <scan root>` → renders all 4 mandatory artifacts (`KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, `KURON-SECURITY-REVISION-<tag>.json`), calls `kuron_redaction.enforce` (fail-closed on missing `redaction.json`, `status != "clean"`, or `not cleaned:`), and prints the open-rail `KURON SECURITY · SCAN SCORECARD` summary.
 
 ## Invariants (no exceptions)
 
