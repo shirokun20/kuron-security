@@ -15,6 +15,11 @@ import subprocess
 import sys
 from datetime import datetime, timezone
 
+from kuron_evidence import validate_finding
+from kuron_redaction import enforce
+from kuron_trace import append as trace_append
+
+VALID_LABELS = ("kuron-panel", "ad-hoc-panel", "unverified-single-pass")
 UNIT_RE = re.compile(r"^F[0-9]{1,9}$")
 REPORT_RE = re.compile(r"^KURON-SECURITY-[0-9][0-9-]*\Z")
 
@@ -90,17 +95,21 @@ def cmd_prepare(report_dir: str, selection: str, repo_root: str, base: str) -> i
     print("units: " + ",".join(units))
     print(f"patch dir: {patch_dir}")
 def check_claims(unit: dict) -> str | None:
-    for claim in ("targeted", "no_new_vulnerability", "behaviour_unchanged"):
-        got = (unit.get("claims") or {}).get(claim, {})
-        if got.get("state") != "CONFIDENT":
-            return f"{unit['id']}: claim {claim} is not CONFIDENT"
-    if "untested" not in unit or "attack_paths" not in unit:
-        return f"{unit['id']}: missing untested or attack_paths"
-    for p in unit["attack_paths"]:
-        if p.get("kind") not in ("opened", "still_reachable", "set_aside") or not p.get(
-            "text"
-        ):
-            return f"{unit['id']}: bad attack path"
+    ok, reasons = validate_finding(unit)
+    if not ok:
+        return f"{unit.get('id', '?')}: {'; '.join(reasons)}"
+    if "claims" in unit:
+        for claim in ("targeted", "no_new_vulnerability", "behaviour_unchanged"):
+            got = (unit.get("claims") or {}).get(claim, {})
+            if got.get("state") != "CONFIDENT":
+                return f"{unit['id']}: claim {claim} is not CONFIDENT"
+        if "untested" not in unit or "attack_paths" not in unit:
+            return f"{unit['id']}: missing untested or attack_paths"
+        for p in unit["attack_paths"]:
+            if p.get("kind") not in ("opened", "still_reachable", "set_aside") or not p.get(
+                "text"
+            ):
+                return f"{unit['id']}: bad attack path"
     return None
 
 
@@ -111,7 +120,11 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
             "patches dir must live inside a KURON-SECURITY-<timestamp> report directory"
         )
     record = load_json(os.path.join(patch_dir, "patches.json"))
+    label = record.get("label") or "ad-hoc-panel"
+    if label not in VALID_LABELS:
+        label = "ad-hoc-panel"
     units = record.get("units", [])
+    rendered_artifacts: list[str] = ["PATCHES.md", "patches.jsonl"]
     patches_display = os.path.normpath(patches_dir)
     ids = set()
     for u in units:
@@ -132,10 +145,11 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
             if u.get("untested") not in (True, False) or not u.get("tests_run"):
                 return fail(f"{u['id']}: missing untested/tests_run")
             diff = os.path.join(patch_dir, f"{u['id']}.diff")
-            if not os.path.exists(diff) or "diff --git" not in open(
-                diff, errors="replace"
-            ).read():
+            if not os.path.exists(diff):
                 return fail(f"{u['id']}: missing raw diff")
+            with open(diff, encoding="utf-8", errors="replace") as dfh:
+                if "diff --git" not in dfh.read():
+                    return fail(f"{u['id']}: missing raw diff")
         elif u["status"] == "declined" and not u.get("decline_reason"):
             return fail(f"{u['id']}: declined without reason")
         if u.get("confirmed") is False and u["status"] != "declined":
@@ -172,23 +186,29 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
             with open(os.path.join(patches_dir, f"{fid}.md"), "w") as fh:
                 fh.write("\n".join(lines) + "\n")
             continue
-        raw = open(os.path.join(patch_dir, f"{fid}.diff"), errors="replace").read()
+        with open(os.path.join(patch_dir, f"{fid}.diff"), encoding="utf-8", errors="replace") as dfh:
+            raw = dfh.read()
         c = u["claims"]
+        tests_run = str(u.get("tests_run") or "")
+        is_untested = bool(u.get("untested")) or not tests_run or "not run" in tests_run.lower()
+        unit_label = f"{label}, untested" if is_untested else label
         header = [
             f"# Patch for {fid}: {u.get('title','')}",
-            "# Trust label: kuron-panel (reviewed by an independent patch reviewer plus a fresh diff challenger; not the official verified stamp).",
+            f"# Trust label: {unit_label} (independent patch reviewer + diff challenger; not the official verified stamp).",
             f"# TARGETED ({c['targeted']['evidence']})",
             f"# NO_NEW_VULNERABILITY ({c['no_new_vulnerability']['evidence']})",
             f"# BEHAVIOUR_UNCHANGED ({c['behaviour_unchanged']['evidence']})",
         ]
-        if u.get("untested"):
+        if is_untested:
             header.append(
                 "# Notice: no test in the project's suite covers the patched "
                 "code; this claim rests on review alone."
             )
         header.append(f"# Apply: git apply {patches_display}/{fid}.patch")
-        with open(os.path.join(patches_dir, f"{fid}.patch"), "w") as fh:
+        with open(os.path.join(patches_dir, f"{fid}.patch"), "w", encoding="utf-8") as fh:
             fh.write("\n".join(header) + "\n" + raw)
+        rendered_artifacts.append(f"{fid}.patch")
+        rendered_artifacts.append(f"{fid}.md")
         chk = git(["apply", "--check", os.path.join(patches_dir, f"{fid}.patch")],
                   cwd=repo_root)
         numstat = git(
@@ -199,8 +219,8 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
             f"# {fid} — patch",
             "",
             f"Summary: {u.get('summary','')}",
-            f"Trust: kuron-panel (independent patch reviewer + diff challenger)."
-            + (" Review-only: no covering test." if u.get("untested") else ""),
+            f"Trust: {unit_label} (independent patch reviewer + diff challenger)."
+            + (" Review-only: no covering test." if is_untested else ""),
             f"Tests: {u.get('tests_run','')}",
             f"Reviewed paths: {', '.join(u.get('reviewed_paths', []))}",
             f"Apply check: {'clean' if chk.returncode == 0 else 'FAILED — tree moved under these files; patch still built against ' + base}",
@@ -210,17 +230,17 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
             "```",
             f"Apply: `git apply {patches_display}/{fid}.patch`",
         ]
-        with open(os.path.join(patches_dir, f"{fid}.md"), "w") as fh:
+        with open(os.path.join(patches_dir, f"{fid}.md"), "w", encoding="utf-8") as fh:
             fh.write("\n".join(note) + "\n")
         u["apply_check"] = "clean" if chk.returncode == 0 else "failed"
         u["diffstat"] = numstat.stdout.strip()
+        u["label"] = unit_label
 
     index = ["# Patches", ""]
     for u in units:
         if u["status"] == "patch_written":
             index.append(
-                f"- {u['id']}: patch written (kuron-panel"
-                + (", review-only: no covering test" if u.get("untested") else "")
+                f"- {u['id']}: patch written ({u.get('label', label)}"
                 + f") — {u.get('title','')}"
             )
         elif u["status"] == "declined":
@@ -244,6 +264,15 @@ def cmd_render(patch_dir: str, patches_dir: str, repo_root: str, base: str) -> i
                 + "\n"
             )
     report_dir = os.path.dirname(os.path.normpath(patches_dir))
+    trace_append(
+        os.path.join(report_dir, "trace.jsonl"),
+        {"event": "render_patches", "label": label, "units": [u.get("id") for u in units]},
+    )
+    if os.path.exists(os.path.join(patches_dir, "redaction.json")):
+        enforce(patches_dir, rendered_artifacts)
+    else:
+        patches_rel = os.path.basename(os.path.normpath(patches_dir))
+        enforce(report_dir, [os.path.join(patches_rel, a) for a in rendered_artifacts])
     gi = os.path.join(report_dir, ".gitignore")
     if not os.path.exists(gi):
         with open(gi, "w") as fh:
