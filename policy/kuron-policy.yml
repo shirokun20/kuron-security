@@ -1,0 +1,25 @@
+version: 1
+profiles:
+  personal:
+    effort: low-medium
+    isolation: local-worktree
+    block: []
+  bisnis:
+    effort: medium-high
+    isolation: sandbox-worktree-per-scan
+    block:
+      - severity: CRITICAL
+        path: 'src/**'
+      - severity: HIGH
+        path: 'auth/**'
+  enterprise:
+    effort: high
+    isolation: ephemeral-worktree-deny-default
+    four_eyes: CRITICAL
+    block:
+      - severity: CRITICAL
+        path: '*'
+      - severity: CRITICAL
+        path: 'tests/*'
+      - severity: HIGH
+        path: 'src/**'
