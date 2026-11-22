@@ -39,26 +39,25 @@ stated as an assumption). Large tree: recommend scoped first.
 
 ## Run
 
-1. Scan root = absolute repo path. Scope = dirs or null.
-2. Fixed confirmation (core). Then
-   `mkdir -p KURON-SECURITY-<ts>/.kuron-security-run`, then
-   `write_scan_meta.py <run dir> <root> --mode scan --effort <tier>
-   [--scope <dirs>]`.
-3. Partition: whole repo -> one component per top-level source dir
+1. Preflight: run `scripts/kuron_capabilities.py` (`probe` + `select_path`) and
+   `scripts/kuron_policy.py` (`validate` + `attestation` on `policy/kuron-policy.yml`).
+   Abort if the requested tier (`personal`/`bisnis`/`enterprise`) cannot be met.
+2. Consolidated confirmation gate: confirm time/token cost AND explicit consent
+   if the selected label is `ad-hoc-panel` or `unverified-single-pass` (headless
+   without explicit consent aborts).
+3. Scan root = absolute repo path. Create `KURON-SECURITY-<ts>/.kuron-security-run`
+   and write `scan-meta.json` (with `label`, `tier`, `attestation`).
+4. Partition: whole repo -> one component per top-level source dir
    (cap above applies); scoped -> scope dirs are the components.
-4. Threat-model recon (medium/high): one lightweight
-   `security-reviewer` per component reporting entryPoints, sinks,
-   hotFiles (read-only; JSON). Feed each file list into that
-   component's researchers.
-5. Research in waves of <=8 dispatches: per component x lens
-   (medium 1x, high 2x), each with its lens + hot files. Update
-   `coverage.json` per wave.
-6. Sweep: one reviewer over tracked files no researcher claimed
-   (from coverage union vs `ls-files`); second sweep at high.
-   Secrets pass when focus set.
-7. Dedupe -> `C1..Cn`. Panel per candidate (core). Tally.
-8. Delivery (core): MD + JSONL + SARIF + stamp via
-   `scripts/kuron_products.py`. Report names components, skipped
-   areas with reasons, researchers returned/lost, collapsed shape
-   where used, and (whole-repo) the completeness check over
-   top-level dirs.
+5. Threat-model recon (medium/high): one read-only researcher per component
+   reporting entryPoints, sinks, hotFiles (JSON).
+6. Research in waves of <=8 dispatches using `agents/researcher.md` (read-only).
+   Update `coverage.json` per wave.
+7. Sweep over unread files; secrets pass when focus set.
+8. Pre-panel evidence gate (`scripts/kuron_evidence.py` `filter_findings`) +
+   dedupe (`file:line + CWE`, max severity) -> `C1..Cn`, recording dropped items
+   in `discarded[]`. Run 3-lens panel (`agents/verifier-*.md`) and log allowlisted
+   checks via `scripts/kuron_trace.py`.
+9. Redact (`agents/redactor.md` -> `redaction.json`) and deliver all 4 mandatory
+   artifacts via `scripts/kuron_products.py <report dir> <scan root>` (enforces
+   fail-closed redaction via `scripts/kuron_redaction.py`).

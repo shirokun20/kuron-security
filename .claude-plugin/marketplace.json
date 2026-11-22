@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kuron-security",
-  "description": "Claude Security pipeline (codebase scan, scan changes, suggest patches) for any 2026 AI coding agent without the proprietary Workflow tool — featuring a 3-lens adversarial refutation panel, visual scorecards, Mermaid attack-path graphs, and SARIF 2.1.0 output.",
+  "description": "Capability-adaptive, evidence-first security audit pipeline (codebase scan, scan changes, suggest patches) for 2026 AI coding agents — featuring taint-chain evidence contracts, three operating tiers (personal, bisnis, enterprise), honest provenance labels, fail-closed redaction, and SARIF 2.1.0 output.",
   "owner": {
     "name": "shirokun20",
     "url": "https://github.com/shirokun20"
@@ -9,8 +9,8 @@
   "plugins": [
     {
       "name": "kuron-security",
-      "description": "Run Anthropic's Claude Security pipeline (codebase scan, scan changes, suggest patches) on any AI agent using subagent waves, a 3-lens adversarial refutation panel (REACHABILITY, IMPACT, DEFENSES), isolated scratch-clone patch verification, visual scorecards, and Mermaid source-to-sink attack graphs.",
-      "version": "1.2.3",
+      "description": "Capability-adaptive, evidence-first security audit pipeline (codebase scan, scan changes, suggest patches) with 3-lens adversarial refutation, isolated scratch-clone patching, three operating tiers (personal, bisnis, enterprise), honest provenance labels, and fail-closed redaction.",
+      "version": "2.0.0",
       "author": {
         "name": "shirokun20"
       },

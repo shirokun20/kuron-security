@@ -56,54 +56,27 @@ ONLY acted-on value is an id matching `^F[0-9]{1,9}$`, else literal
 
 ## Engine
 
-0. Scan root = stamp `scan_prefix` joined to REPO ROOT.
+0. Preflight: run `scripts/kuron_capabilities.py` (`probe` + `select_path`) and
+   `scripts/kuron_policy.py` (`validate` + `check`). For `enterprise` CRITICAL
+   findings, enforce four-eyes review (two independent verifier agents + user
+   approval recorded in `trace.jsonl`) before patching.
 1. `scripts/kuron_patch.py --prepare <report dir> <selection>
-   --repo-root <repo root> --base <PATCH BASE>` (standalone call,
-   vendored in this skill; the official script refuses non-official
-   report dirs, and the official plugin is proprietary — never copy it).
+   --repo-root <repo root> --base <PATCH BASE>`.
+   Scan root = stamp `scan_prefix` joined to REPO ROOT.
    Units = printed ids in order; `skipped_stale` (precondition-found)
    units get no workspace and go straight to record.
 2. Waves of up to 4 units: per unit, `git clone --shared
    --no-checkout -c core.hooksPath=/dev/null <repo root>
    <patch dir>/scratch-<id>` then `checkout --detach <PATCH BASE>`.
 3. Generate: read unit's `<patch dir>/findings/F<n>.json`; dispatch
-   one generator per unit (edit-capable subagent briefed from
-   `patch-generator.md`: WORKSPACE-only writes, root-cause targeted
-   fix, `git add -A` once, return summary + changedFiles; untouched
-   workspace + honest summary when not exploitable at this revision
-   or owner decision needed).
-4. Verify + challenge side by side (nothing restages meanwhile):
-   `clean -fd` each scratch, then per unit one verifier (briefed
-   from `patch-verifier.md`: staged-only review, CONFIRMED with
-   pre-change evidence, three claims TARGETED / NO_NEW_VULNERABILITY
-   / BEHAVIOUR_UNCHANGED as CONFIDENT/NOT_CONFIDENT/UNSURE with
-   file:line evidence, tests run, `untested` flag, REVIEWED_PATHS)
-   plus one fresh researcher scoped ONLY to the staged change
-   (`diff --cached --no-ext-diff --no-textconv` + `show HEAD:<path>`;
-   one question: what can an attacker do with this change in place
-   that they should not; label paths opened / still_reachable /
-   set_aside pre-existing). Panel classifies; never suggest paths or
-   verdicts to it.
-5. Judge: verifier CONFIRMED false -> decline as not confirmed
-   (unless an earlier verifier said true or a researcher shows the
-   exploit still reaching the named code: ordinary objection).
-   Objection -> one revision round: `reset --hard <PATCH BASE>` +
-   `clean -fd`, redispatch generator with OBJECTIONS, re-verify;
-   second objection declines. Settle: earned patch ->
-   `diff --cached --binary --no-ext-diff --no-textconv
-   --src-prefix=a/ --dst-prefix=b/ --output <patch dir>/<id>.diff`;
-   confirm REVIEWED_PATHS sane (inside repo, no absolute/`..`/`.git/`)
-   and `apply --numstat` matches; surprise stops with a note.
-   Remove workspaces as each wave settles.
-6. Write `<patch dir>/patches.json` per `patch-spec.md` (units,
-   statuses, attempts, claims + evidence, tests_run, untested,
-   reviewed_paths, attack_paths with kinds, decline_reason/
-   recommendation), then
+   one generator (`agents/patch-generator.md`, scratch-only writes).
+4. Verify + challenge (`agents/patch-verifier.md`, read-only): check evidence
+   contract, staged diff, and record `untested` / `tests_run` honestly.
+5. Judge: objection -> one revision round; second objection declines.
+6. Redact (`agents/redactor.md` -> `redaction.json`) and render via
    `scripts/kuron_patch.py <patch dir> <report dir>/patches/ <repo root>
-   --base <PATCH BASE>` (standalone). It writes `F<n>.patch` +
-   `F<n>.md`, `PATCHES.md`, `patches.jsonl`, fences `.gitignore`,
-   `apply --check`s each patch (failure reported, never dropped),
-   removes stale products and scratch ground.
+   --base <PATCH BASE>` (gates on evidence, stamps honest label + `untested`
+   when tests did not run, and enforces fail-closed redaction).
 
 ## Report to the user
 

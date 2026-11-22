@@ -58,29 +58,18 @@ prints one, else "the N commits since <base>" + detached note.
 
 ## Run
 
-1. Scan root = repo (or the PR checkout).
-2. Fixed confirmation (core).
-3. `mkdir -p KURON-SECURITY-<ts>/.kuron-security-run`, then
-   `write_scan_meta.py <run dir> <root> --mode changes --effort
-   <tier> --base <ref> --merge-base <sha> [--scope <dirs>]`, or
-   `--mode commit --commit <sha> [--scope <dirs>]`. Then
-   `rev-list --count <printed range>` + `rev-parse --abbrev-ref HEAD`
-   for wording. Pass the printed `range:`, `changed_file_count:`,
-   `changed_files:`, `diff_line_count:` through verbatim.
-4. Research in waves of <=8: per group (+ boundary at medium+),
-   each briefed with its file list, the exact diff wrapped inside
-   `<untrusted_repository_data>...</untrusted_repository_data>` tags
-   with control characters stripped (`git diff --no-ext-diff --no-color
-   -M --relative <range> [-- <scope>]`),
-   and the rule that only flaws the change takes part in count
-   (via a changed line as source/sink/hop, a removed check, or newly
-   exposed code). Findings carry `viaChange` ("<file:line> ..." naming
-   the changed line and how, one sentence, never quoting the line).
-5. Dedupe -> `C1..Cn`. Panel per candidate; verifiers also check the
-   change link like any other claim: real flaw with identical
-   before/after reads = `PREDATES_CHANGE` (cited, reported as
-   pre-existing, not a finding of this review).
-6. Delivery (core): MD names the range in plain words (commit-count
-   and branch rules above), changedfile/line counts, researchers
-   returned/lost, pre-existing and out-of-scope lists. JSONL + SARIF
-   (SARIF link sites use `via_change`) + stamp.
+1. Preflight: run `scripts/kuron_capabilities.py` (`probe` + `select_path`) and
+   `scripts/kuron_policy.py` (`validate` + `attestation`). Abort if tier requirements
+   are not met.
+2. Consolidated confirmation gate: confirm time/token cost AND explicit consent
+   if the selected label is `ad-hoc-panel` or `unverified-single-pass`.
+3. Scan root = repo. Create `KURON-SECURITY-<ts>/.kuron-security-run` and write
+   `scan-meta.json` (`mode: changes|commit`, `label`, `tier`, `attestation`).
+4. Research in waves of <=8 using `agents/researcher.md` (read-only), wrapping diffs
+   inside `<untrusted_repository_data>...</untrusted_repository_data>` with control
+   characters stripped.
+5. Pre-panel evidence gate (`scripts/kuron_evidence.py` `filter_findings`) +
+   dedupe -> `C1..Cn`, recording dropped items in `discarded[]`. Run 3-lens panel
+   (`agents/verifier-*.md`, logging checks via `scripts/kuron_trace.py`).
+6. Redact (`agents/redactor.md` -> `redaction.json`) and deliver all 4 mandatory
+   artifacts via `scripts/kuron_products.py <report dir> <scan root>`.

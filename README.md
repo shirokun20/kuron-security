@@ -18,14 +18,34 @@
 
 ## Why Kuron Security vs. a generic `"audit my code"` prompt?
 
-| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v1.2.0` · 2026)** |
+| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v2.0.0` · 2026)** |
 |---|---|---|---|
 | **Harnesses supported** | Any chat | Claude Code (`Workflow` tool only) | **Antigravity · omp · OpenCode · Codex · Claude Code** |
 | **False-positive filtering** | ❌ Single LLM guesses & pads | ✅ 3-lens verifier panel | ✅ **3-lens adversarial panel (`REACHABILITY` · `IMPACT` · `DEFENSES`)** |
 | **Severity calibration** | ❌ Frequently inflates to `HIGH`/`CRITICAL` | ✅ Clamped to lowest confirming voter | ✅ **Automatic panel severity downgrade + visual meter** |
 | **Attack-path visualization** | ❌ Prose wall | ❌ Prose only | ✅ **Per-finding Mermaid Source-to-Sink graph + `<details>` audit trail** |
 | **Patch verification** | ❌ Edits your working tree directly | ✅ Scratch clone + verifier + attacker | ✅ **Isolated scratch clone + 3-claim verifier + fresh attacker challenge** |
-| **Machine outputs** | ❌ Chat text only | ✅ MD + JSONL + SARIF + stamp | ✅ **MD + JSONL + SARIF 2.1.0 + `kuron-panel` stamp** |
+| **Machine outputs** | ❌ Chat text only | ✅ MD + JSONL + SARIF + stamp | ✅ **MD + JSONL + SARIF 2.1.0 + honest provenance stamp** |
+
+---
+
+## Operating Tiers & Honest Provenance Labels (`v2.0.0`)
+
+### Three Operating Tiers
+
+| Tier | Effort & Shape | Isolation | Artifacts & Review |
+|---|---|---|---|
+| `personal` | Low/medium, scoped focus | Local worktree | MD + JSONL + SARIF + stamp; optional human review |
+| `bisnis` | Medium (high on sensitive areas) | Enforced sandbox, worktree per scan | All 4 artifacts + mandatory redaction + HIGH/CRITICAL review before patch |
+| `enterprise` | High, full top-level coverage | Ephemeral worktree per run, deny-default sandbox, SHA-256 attested `policy/kuron-policy.yml` | Immutable `trace.jsonl`, four-eyes review on CRITICAL before patch |
+
+### Honest Provenance Labels
+
+| Label | When Used | Example |
+|---|---|---|
+| `kuron-panel` | Specialist `security-reviewer` + official briefs ran | Full 3-lens specialist panel |
+| `ad-hoc-panel` | 3 isolated read-only replacement lenses ran (requires user consent) | Antigravity `define_subagent` / `research` |
+| `unverified-single-pass` | No subagents available; single pass + deterministic read-only script check (requires user consent) | CLI-only harness |
 
 ---
 
