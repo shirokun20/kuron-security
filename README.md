@@ -18,7 +18,7 @@
 
 ## Why Kuron Security vs. a generic `"audit my code"` prompt?
 
-| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v2.1.0` · 2026)** |
+| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v2.1.1` · 2026)** |
 |---|---|---|---|
 | **Harnesses supported** | Any chat | Claude Code (`Workflow` tool only) | **Antigravity · omp · OpenCode · Codex · Claude Code** |
 | **False-positive filtering** | ❌ Single LLM guesses & pads | ✅ 3-lens verifier panel | ✅ **3-lens adversarial panel (`REACHABILITY` · `IMPACT` · `DEFENSES`)** |
@@ -29,7 +29,7 @@
 
 ---
 
-## Operating Tiers & Honest Provenance Labels (`v2.1.0`)
+## Operating Tiers & Honest Provenance Labels (`v2.1.1`)
 
 ### Three Operating Tiers
 
@@ -196,11 +196,15 @@ Each finding is presented as an instant-triage **Security Advisory Card** combin
 | 🟡 **`MEDIUM`** | **`HIGH`** | `CWE-20` (Improper Input Validation) | `remote_config_service.dart:455` | ✅ **`3/3 TRUE_POSITIVE`** (`kuron-panel`) | 🔧 **`F1.patch` ready** (`apply=clean`) |
 
 ```mermaid
-flowchart LR
-    src["🔴 Untrusted Manifest / ZIP<br/>source_installer_service.dart:407"] -->|"sourceId = 'app'"| val["🟡 _validateSourceId<br/>remote_config_service.dart:67<br/>(regex ^[a-z0-9_-]+$ passes)"]
-    val --> write["🟠 Write configs/app-config.json<br/>remote_config_service.dart:431"]
-    write --> mark["🟠 markSourceInstalled('app')<br/>remote_config_service.dart:455<br/>(_bundledSourceIds only checks '[REDACTED]')"]
-    mark -->|"Next App Startup"| sink["💥 _loadFromFile('app')<br/>remote_config_service.dart:645<br/>Overwrites global _appConfig"]
+flowchart TD
+  A["INPUT — source: 'app'<br/>source_installer_service.dart:407"]
+  B["TRUST BOUNDARY<br/>_validateSourceId passes<br/>remote_config_service.dart:67"]
+  C["IMPACT — next startup overrides _appConfig<br/>remote_config_service.dart:645"]
+  A -->|"sourceId = 'app'"| B
+  B -->|"config + registry write<br/>:431 / :455"| C
+  A -. "no reserved-ID guard at :56" .-> C
+  classDef impact fill:#5b1a1a,stroke:#ff6b6b,color:#fff;
+  class C impact;
 ```
 
 > [!WARNING]
@@ -264,7 +268,7 @@ KURON-SECURITY-20261121-125051/
 
 | Symptom | Fix |
 |---|---|
-| Official `claude-security` plugin not in cache | Optional in v2.1.0: `agents/` provides vendored clean-room baseline briefs and `kuron_products.py` includes a built-in SARIF 2.1.0 fallback; install the official plugin only if you want `kuron-panel` parity. |
+| Official `claude-security` plugin not in cache | Optional in v2.1.1: `agents/` provides vendored clean-room baseline briefs and `kuron_products.py` includes a built-in SARIF 2.1.0 fallback; install the official plugin only if you want `kuron-panel` parity. |
 | `python3: command not found` | Install Python 3 (`brew install python` on macOS, `apt install python3` on Debian/Ubuntu). Standard library only — zero `pip` dependencies. |
 | Verifier "reviewed the wrong tree" | Always pass absolute `SCAN_ROOT` / `WORKSPACE` paths in subagent briefs. |
 | `git apply --check` fails on a generated patch | Your working tree moved after the scan; the patch is anchored to the recorded `PATCH BASE` commit in `F<n>.md`. |
