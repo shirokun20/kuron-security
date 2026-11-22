@@ -1,0 +1,13 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Kuron Security",
+      "description": "Capability-adaptive, evidence-first security audit for any 2026 AI coding agent. Taint-chain findings, three operating tiers, honest provenance labels and SARIF 2.1.0.",
+      "skills": [
+        "kuron-security"
+      ]
+    }
+  ]
+}

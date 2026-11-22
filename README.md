@@ -4,6 +4,10 @@
 [![Agent Skills 2026](https://img.shields.io/badge/agent--skills-2026_compatible-blue)](https://agentskills.io)
 [![SARIF 2.1.0](https://img.shields.io/badge/SARIF-2.1.0-informational)](#what-you-get)
 [![Release](https://img.shields.io/github/v/release/shirokun20/kuron-security)](https://github.com/shirokun20/kuron-security/releases)
+[![skills.sh](https://img.shields.io/badge/skills.sh-kuron--security-blue)](https://www.skills.sh/shirokun20/kuron-security/kuron-security)
+[![agentskill.sh](https://img.shields.io/badge/agentskill.sh-listed-brightgreen)](https://agentskill.sh/@shirokun20/kuron-security)
+[![skillsmd](https://img.shields.io/badge/skillsmd-submitted-lightgrey)](https://skillsmd.dev/)
+[![Sponsor](https://img.shields.io/badge/sponsor-shirokun20-ff69b4)](https://github.com/sponsors/shirokun20)
 
 **Run Anthropic's Claude Security pipeline on any 2026 AI coding agent — no proprietary `Workflow` tool required.**
 
@@ -274,6 +278,15 @@ KURON-SECURITY-20261121-125051/
 | `git apply --check` fails on a generated patch | Your working tree moved after the scan; the patch is anchored to the recorded `PATCH BASE` commit in `F<n>.md`. |
 
 ---
+
+## Support & Sponsor
+
+Kuron Security is maintained in public, free to install, and free to fork. If it saves you time or catches a real bug, the most useful things you can do are:
+
+- **Star the repo** and install it with `npx skills add shirokun20/kuron-security --skill kuron-security -g -y` — skills.sh indexes from real installs, so this is how the skill becomes discoverable to other agents.
+- **Report a false positive or a missed bug** with the `file:line` and the project language in an issue. Field reports are the fastest way to improve the evidence contract and the 3-lens panel.
+- **Add a harness** you actually use. See `CONTRIBUTING.md` — the capability adapter is designed so a new harness is a small, testable addition.
+- **Sponsor the work** at [github.com/sponsors/shirokun20](https://github.com/sponsors/shirokun20). Funds go to maintenance, more harness coverage, larger real-world scan fixtures, and keeping the audit trail and SARIF output standards-compliant. No feature is gated behind sponsorship — ever.
 
 ## Safety Invariants & Attribution
 
