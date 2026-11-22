@@ -158,18 +158,18 @@ Each finding is presented as an instant-triage **Security Advisory Card** combin
 flowchart LR
     src["🔴 Untrusted Manifest / ZIP<br/>source_installer_service.dart:407"] -->|"sourceId = 'app'"| val["🟡 _validateSourceId<br/>remote_config_service.dart:67<br/>(regex ^[a-z0-9_-]+$ passes)"]
     val --> write["🟠 Write configs/app-config.json<br/>remote_config_service.dart:431"]
-    write --> mark["🟠 markSourceInstalled('app')<br/>remote_config_service.dart:455<br/>(_bundledSourceIds only checks 'nhentai')"]
+    write --> mark["🟠 markSourceInstalled('app')<br/>remote_config_service.dart:455<br/>(_bundledSourceIds only checks '[REDACTED]')"]
     mark -->|"Next App Startup"| sink["💥 _loadFromFile('app')<br/>remote_config_service.dart:645<br/>Overwrites global _appConfig"]
 ```
 
 > [!WARNING]
-> **Impact & Exploit Scenario:** An untrusted source manifest or ZIP package claiming `"source": "app"` writes `configs/app-config.json` and registers `'app'` in `installed_source_ids` (because `_bundledSourceIds` only checks `{'nhentai'}`). On the next startup, `_restoreInstalledSourcesFromCache` loads `app-config.json` into `_appConfig`, hijacking global settings including `storage.folders.backup` (passed to `path.join` in `DownloadBloc`/`DownloadService`) while remaining invisible in the installed-sources UI.
+> **Impact & Exploit Scenario:** An untrusted source manifest or ZIP package claiming `"source": "app"` writes `configs/app-config.json` and registers `'app'` in `installed_source_ids` (because `_bundledSourceIds` only checks `{'[REDACTED]'}`). On the next startup, `_restoreInstalledSourcesFromCache` loads `app-config.json` into `_appConfig`, hijacking global settings including `storage.folders.backup` (passed to `path.join` in `DownloadBloc`/`DownloadService`) while remaining invisible in the installed-sources UI.
 
 ```diff
 --- a/lib/core/config/remote_config_service.dart
 +++ b/lib/core/config/remote_config_service.dart
 @@ -56,15 +56,22 @@ class RemoteConfigService {
-   static const Set<String> _bundledSourceIds = {'nhentai'};
+   static const Set<String> _bundledSourceIds = {'[REDACTED]'};
 +  static const Set<String> reservedConfigIds = {'app', 'tags', ..._bundledSourceIds};
 +
 +  static bool isReservedConfigId(String sourceId) =>
