@@ -2,11 +2,11 @@
 name: kuron-security
 description: "Capability-adaptive, evidence-first security audit skill (codebase scan, scan changes, suggest patches) for 2026 AI agent harnesses. Enforces runtime capability probing, taint-chain evidence contracts, three operating tiers (personal, bisnis, enterprise), honest provenance labels (kuron-panel, ad-hoc-panel, unverified-single-pass), and fail-closed redaction."
 metadata:
-  version: 2.0.0
+  version: 2.1.0
   updated: 2026-11-22
 ---
 
-# Kuron Security v2.0.0 (Capability-Adaptive, Evidence-First Security Audit)
+# Kuron Security v2.1.0 (Capability-Adaptive, Evidence-First Security Audit)
 
 Kuron Security is a standalone, capability-adaptive security audit engine for
 multi-harness environments (`claude-code`, `opencode`, `omp`, `agy`, `muse`, and
@@ -69,12 +69,36 @@ incomplete chains are dropped pre-panel and recorded in `discarded[]` with `disc
 
 1. `scripts/kuron_capabilities.py` → `capabilities.json` & `select_path`
 2. `scripts/kuron_policy.py` → validate `policy/kuron-policy.yml` & SHA-256 `attestation`
-3. Researchers (`agents/researcher.md`, read-only, `<untrusted_repository_data>`)
-4. `scripts/kuron_evidence.py` → `filter_findings` (kept vs `discarded[]`)
-5. 3-Lens Panel (`agents/verifier-reachability.md`, `verifier-impact.md`, `verifier-defenses.md`) — may only keep or **lower** severity, never raise
-6. `scripts/kuron_trace.py` → allowlisted read-only verification commands (`git show`, `git grep`, `grep`, `nl`, `sed -n`, `python3 -c`) logged with `exit_code` + `trace_id`
-7. Fail-closed Redaction (`agents/redactor.md` → `redaction.json`)
-8. `scripts/kuron_products.py <report dir> <scan root>` → renders all 4 mandatory artifacts (`KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, `KURON-SECURITY-REVISION-<tag>.json`), calls `kuron_redaction.enforce` (fail-closed on missing `redaction.json`, `status != "clean"`, or `not cleaned:`), and prints the open-rail `KURON SECURITY · SCAN SCORECARD` summary.
+3. `scripts/kuron_progress.py` → open the run's progress stream before Fase 1 (see below)
+4. Researchers (`agents/researcher.md`, read-only, `<untrusted_repository_data>`)
+5. `scripts/kuron_evidence.py` → `filter_findings` (kept vs `discarded[]`)
+6. 3-Lens Panel (`agents/verifier-reachability.md`, `verifier-impact.md`, `verifier-defenses.md`) — may only keep or **lower** severity, never raise
+7. `scripts/kuron_trace.py` → allowlisted read-only verification commands (`git show`, `git grep`, `grep`, `nl`, `sed -n`, `python3 -c`) logged with `exit_code` + `trace_id`
+8. Fail-closed Redaction (`agents/redactor.md` → `redaction.json`)
+9. `scripts/kuron_products.py <report dir> <scan root>` → renders all 4 mandatory artifacts (`KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, `KURON-SECURITY-REVISION-<tag>.json`), calls `kuron_redaction.enforce` (fail-closed on missing `redaction.json`, `status != "clean"`, or `not cleaned:`), and prints the open-rail `KURON SECURITY · SCAN SCORECARD` summary.
+
+## Live Progress (event stream first, renderer second)
+
+`scripts/kuron_progress.py` owns progress. `append_event(run_dir, event)` adds one
+append-only record to `<run dir>/progress.jsonl` with `seq`, `ts`, and a
+`trace_id` that must exist in `trace.jsonl` — `validate_projection(run_dir)`
+enforces this, so no status is ever shown without a real event. Event fields:
+`phase`, `phase_total`, `label` (provenance), `agent_id`, `role`, `status`,
+`done`, `total`, `elapsed_ms`, `message`.
+
+`ProgressRenderer` is only a projection, chosen by `detect_terminal()`:
+- `live` — one ASCII line rewritten on **stderr** with `\r\x1b[2K`, throttled
+  (150 ms), clamped to `columns - 1`.
+- `append` — one plain milestone line per event when the terminal is limited.
+- `file` — no terminal output at all; `progress.jsonl` is the only record.
+
+Never use alternate-screen, never enter raw/cbreak mode, and never read keys:
+agent harnesses capture stdout, close stdin, and often have no TTY. stdout stays
+clean for JSONL/SARIF and scorecards. All untrusted text is stripped of ANSI and
+control characters and forced to ASCII before display. `finish()` prints one
+honest final line; signal handlers clean up the live line on SIGINT/SIGTERM.
+Interactive TUI drill-down is an optional renderer for harnesses that support
+it — it is not part of the default pipeline.
 
 ## Invariants (no exceptions)
 

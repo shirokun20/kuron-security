@@ -18,7 +18,7 @@
 
 ## Why Kuron Security vs. a generic `"audit my code"` prompt?
 
-| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v2.0.0` · 2026)** |
+| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v2.1.0` · 2026)** |
 |---|---|---|---|
 | **Harnesses supported** | Any chat | Claude Code (`Workflow` tool only) | **Antigravity · omp · OpenCode · Codex · Claude Code** |
 | **False-positive filtering** | ❌ Single LLM guesses & pads | ✅ 3-lens verifier panel | ✅ **3-lens adversarial panel (`REACHABILITY` · `IMPACT` · `DEFENSES`)** |
@@ -29,7 +29,7 @@
 
 ---
 
-## Operating Tiers & Honest Provenance Labels (`v2.0.0`)
+## Operating Tiers & Honest Provenance Labels (`v2.1.0`)
 
 ### Three Operating Tiers
 
@@ -117,6 +117,27 @@ flowchart TD
 ```
 
 ---
+
+## Live Scan Progress
+
+Progress is an event stream first, a display second. Every phase, wave, and
+agent transition is appended to `<run dir>/progress.jsonl` with a `trace_id`
+that must exist in `trace.jsonl`, so the display is only a projection of real
+recorded events — never a cosmetic guess.
+
+`scripts/kuron_progress.py` writes a single ASCII line to **stderr** when a real
+TTY is available:
+
+```text
+[KURON] 22/48 | phase 2/3 | 2m14s | kuron-panel
+```
+
+When the harness captures output, runs in CI, or has no usable terminal, it
+falls back to plain milestone lines or to the event file alone. stdout stays
+clean for JSONL, SARIF, and the final scorecard. There is no alternate-screen
+and no keyboard handling, which is why this works in omp, agy, muse, opencode,
+Claude Code, and Orca alike. An interactive drill-down view can be added later
+as an optional renderer without changing the event contract.
 
 ## What You Get (Visual Output Preview)
 
@@ -243,7 +264,7 @@ KURON-SECURITY-20261121-125051/
 
 | Symptom | Fix |
 |---|---|
-| Official `claude-security` plugin not in cache | Optional in v2.0.0: `agents/` provides vendored clean-room baseline briefs and `kuron_products.py` includes a built-in SARIF 2.1.0 fallback; install the official plugin only if you want `kuron-panel` parity. |
+| Official `claude-security` plugin not in cache | Optional in v2.1.0: `agents/` provides vendored clean-room baseline briefs and `kuron_products.py` includes a built-in SARIF 2.1.0 fallback; install the official plugin only if you want `kuron-panel` parity. |
 | `python3: command not found` | Install Python 3 (`brew install python` on macOS, `apt install python3` on Debian/Ubuntu). Standard library only — zero `pip` dependencies. |
 | Verifier "reviewed the wrong tree" | Always pass absolute `SCAN_ROOT` / `WORKSPACE` paths in subagent briefs. |
 | `git apply --check` fails on a generated patch | Your working tree moved after the scan; the patch is anchored to the recorded `PATCH BASE` commit in `F<n>.md`. |

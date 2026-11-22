@@ -7,13 +7,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DocsTest(unittest.TestCase):
     def test_versions_consistent(self):
-        self.assertIn("version: 2.0.0", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
+        self.assertIn("version: 2.1.0", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
         self.assertEqual(
             json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"],
-            "2.0.0",
+            "2.1.0",
         )
         m = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
-        self.assertEqual(m["plugins"][0]["version"], "2.0.0")
+        self.assertEqual(m["plugins"][0]["version"], "2.1.0")
 
     def test_skill_declares_labels_and_tiers(self):
         t = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -30,6 +30,7 @@ class DocsTest(unittest.TestCase):
             "kuron_capabilities.py",
             "kuron_policy.py",
             "kuron_evidence.py",
+            "kuron_progress.py",
             "kuron_products.py",
         ):
             self.assertIn(script, t)
@@ -42,3 +43,8 @@ class DocsTest(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         for s in ("personal", "bisnis", "enterprise", "ad-hoc-panel", "unverified-single-pass"):
             self.assertIn(s, readme)
+        self.assertIn("Live Scan Progress", readme)
+        self.assertIn("progress.jsonl", readme)
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("validate_projection", skill)
+        self.assertIn("alternate-screen", skill)

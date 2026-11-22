@@ -59,7 +59,8 @@ ONLY acted-on value is an id matching `^F[0-9]{1,9}$`, else literal
 0. Preflight: run `scripts/kuron_capabilities.py` (`probe` + `select_path`) and
    `scripts/kuron_policy.py` (`validate` + `check`). For `enterprise` CRITICAL
    findings, enforce four-eyes review (two independent verifier agents + user
-   approval recorded in `trace.jsonl`) before patching.
+   approval recorded in `trace.jsonl`) before patching. Open the progress
+   stream with `scripts/kuron_progress.py` and render to stderr only.
 1. `scripts/kuron_patch.py --prepare <report dir> <selection>
    --repo-root <repo root> --base <PATCH BASE>`.
    Scan root = stamp `scan_prefix` joined to REPO ROOT.

@@ -42,6 +42,9 @@ stated as an assumption). Large tree: recommend scoped first.
 1. Preflight: run `scripts/kuron_capabilities.py` (`probe` + `select_path`) and
    `scripts/kuron_policy.py` (`validate` + `attestation` on `policy/kuron-policy.yml`).
    Abort if the requested tier (`personal`/`bisnis`/`enterprise`) cannot be met.
+   Open the progress stream with `scripts/kuron_progress.py`: append an event
+   at each phase/wave boundary with the `trace_id` of the real trace event;
+   `ProgressRenderer` writes to stderr only, never stdout.
 2. Consolidated confirmation gate: confirm time/token cost AND explicit consent
    if the selected label is `ad-hoc-panel` or `unverified-single-pass` (headless
    without explicit consent aborts).

@@ -61,6 +61,8 @@ prints one, else "the N commits since <base>" + detached note.
 1. Preflight: run `scripts/kuron_capabilities.py` (`probe` + `select_path`) and
    `scripts/kuron_policy.py` (`validate` + `attestation`). Abort if tier requirements
    are not met.
+   Open the progress stream with `scripts/kuron_progress.py`: append one event
+   per phase/wave with the real trace `trace_id`; render to stderr only.
 2. Consolidated confirmation gate: confirm time/token cost AND explicit consent
    if the selected label is `ad-hoc-panel` or `unverified-single-pass`.
 3. Scan root = repo. Create `KURON-SECURITY-<ts>/.kuron-security-run` and write
