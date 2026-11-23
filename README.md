@@ -22,7 +22,7 @@
 
 ## Why Kuron Security vs. a generic `"audit my code"` prompt?
 
-| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v2.1.1` · 2026)** |
+| Capability | Generic AI Prompt (`"find security bugs"`) | Official `claude-security` Plugin | 🛡️ **Kuron Security (`v2.2.0` · 2026)** |
 |---|---|---|---|
 | **Harnesses supported** | Any chat | Claude Code (`Workflow` tool only) | **Antigravity · omp · OpenCode · Codex · Claude Code** |
 | **False-positive filtering** | ❌ Single LLM guesses & pads | ✅ 3-lens verifier panel | ✅ **3-lens adversarial panel (`REACHABILITY` · `IMPACT` · `DEFENSES`)** |
@@ -33,7 +33,7 @@
 
 ---
 
-## Operating Tiers & Honest Provenance Labels (`v2.1.1`)
+## Operating Tiers & Honest Provenance Labels (`v2.2.0`)
 
 ### Three Operating Tiers
 
