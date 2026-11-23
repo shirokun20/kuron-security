@@ -46,6 +46,24 @@ class TraceHardeningTest(unittest.TestCase):
             with self.subTest(cmd=cmd), self.assertRaises(CommandNotAllowed):
                 _validate_command(cmd, str(self.root))
 
+    def test_sed_validator_bypass_payloads_rejected(self):
+        (self.root / "f.txt").write_text("x\n", encoding="utf-8")
+        bypasses = [
+            "sed -n '1!e' f.txt",
+            "sed -n '1!e id' f.txt",
+            "sed -n '1!w' f.txt",
+            "sed -n '1!w /tmp/pwn' f.txt",
+            "sed -n '0~2w' f.txt",
+            "sed -n '0~2w /tmp/pwn' f.txt",
+            "sed -n '/a/!w' f.txt",
+            "sed -n '/a/!w /tmp/pwn' f.txt",
+            "sed -n '/a/Me' f.txt",
+            "sed -n '/a/Me id' f.txt",
+        ]
+        for cmd in bypasses:
+            with self.subTest(cmd=cmd), self.assertRaises(CommandNotAllowed):
+                _validate_command(cmd, str(self.root))
+
     def test_sed_safe_script_accepted(self):
         (self.root / "f.txt").write_text("x\n", encoding="utf-8")
         argv = _validate_command("sed -n '1,5p' f.txt", str(self.root))

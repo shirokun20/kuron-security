@@ -185,60 +185,16 @@ def _confine_path(token: str, root: str) -> None:
         )
 
 
-def _sed_script_safe(script: str) -> bool:
-    """Return True if a sed script contains no shell-exec (e/eval) or write (w/W) command.
+_SED_PRINT_ONLY = re.compile(r"^[0-9]+(,[0-9]+)?p$")
 
-    The script is inspected command-by-command after stripping address prefixes.
-    Substitution flags are inspected separately because ``s///w file`` and
-    ``s///e`` are GNU-sed write/exec forms that otherwise look innocuous.
+
+def _sed_script_safe(script: str) -> bool:
+    """Return True if a sed script is strictly a print-range command (e.g. '1,5p' or '42p').
+
+    Any other command, addressing form, substitution, execution (e), or file write (w)
+    is rejected by default to prevent validator bypasses.
     """
-    for part in re.split(r"[;\n]", script):
-        cmd = part.strip()
-        if not cmd:
-            continue
-        pos = 0
-        while pos < len(cmd):
-            ch = cmd[pos]
-            if ch.isdigit() or ch in "$,":
-                pos += 1
-                continue
-            if ch == "/":
-                pos += 1
-                while pos < len(cmd):
-                    if cmd[pos] == "\\":
-                        pos += 2
-                        continue
-                    if cmd[pos] == "/":
-                        pos += 1
-                        break
-                    pos += 1
-                continue
-            break
-        rest = cmd[pos:].strip()
-        if not rest:
-            continue
-        head = rest[0]
-        if head in "eEwW":
-            return False
-        if head == "s" and len(rest) > 1:
-            delim = rest[1]
-            if delim.isalnum() or delim == "\\":
-                # Not a substitution; e.g. a bare address we failed to strip.
-                continue
-            # The opening delimiter at index 1 counts as the first field.
-            fields = 1
-            idx = 2
-            while idx < len(rest) and fields < 3:
-                if rest[idx] == "\\":
-                    idx += 2
-                    continue
-                if rest[idx] == delim:
-                    fields += 1
-                idx += 1
-            flags = rest[idx:] if fields >= 3 else ""
-            if any(flag in flags for flag in ("e", "w", "W")):
-                return False
-    return True
+    return bool(_SED_PRINT_ONLY.match(script.strip()))
 
 
 def _validate_argv(argv: list[str], prefix: str, root: str) -> None:
