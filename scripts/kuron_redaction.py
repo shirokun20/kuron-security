@@ -4,11 +4,31 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 
 class RedactionError(Exception):
     """Raised when redaction verdict is missing, not clean, or an artifact is unredacted."""
+
+
+# Independent stdlib secret scan: this is deliberately separate from the
+# agent-written redaction.json verdict, which is trusted only as a claim.
+SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("aws-access-key", re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")),
+    ("github-token", re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b")),
+    ("github-fine-grained-pat", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{40,}\b")),
+    ("slack-token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b")),
+    (
+        "private-key",
+        re.compile(r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----"),
+    ),
+)
+
+
+def scan_secrets(text: str) -> list[str]:
+    """Return the names of secret patterns found in ``text`` (empty means clean)."""
+    return [name for name, pattern in SECRET_PATTERNS if pattern.search(text)]
 
 
 def verdict(report_dir: str) -> dict:

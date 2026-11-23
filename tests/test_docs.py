@@ -50,3 +50,29 @@ class DocsTest(unittest.TestCase):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("validate_projection", skill)
         self.assertIn("alternate-screen", skill)
+
+    def test_docs_match_hardened_behavior(self):
+        skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("python3 -c", skill)
+        for phrase in (
+            "Panel quorum",
+            "Unanimous `TRUE_POSITIVE`",
+            "Per-host enforcement matrix",
+            "usage/policy error",
+            "Exit codes",
+            "stderr",
+            "unverified-single-pass",
+        ):
+            self.assertIn(phrase, skill)
+        self.assertIn("user-writable plugin cache", skill.lower())
+
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Relationship to `claude-security`", readme)
+        self.assertIn("clean-room reimplementation", readme)
+        self.assertIn("No** `sys.path` mutation", readme)
+
+        products = (ROOT / "scripts" / "kuron_products.py").read_text(encoding="utf-8")
+        self.assertNotIn("sys.path.insert", products)
+        self.assertIn('"builder": "vendored"', products)
+        self.assertIn("os.replace", products)
+        self.assertIn("scan_secrets", products)

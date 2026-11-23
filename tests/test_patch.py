@@ -20,6 +20,25 @@ class PatchTest(unittest.TestCase):
             ],
             "independent_routes": ["static", "runtime"],
             "reachability": {"active_in_default_config": True},
+            "poc_trace": [
+                {"file": "a.py", "line": 1, "action": "input"},
+                {"file": "a.py", "line": 2, "action": "guard"},
+                {"file": "a.py", "line": 3, "action": "sink"},
+            ],
+            "preconditions": [],
+            "why_guard_fails": "value not covered",
+            "cwe_class": "Base",
+            "cwe_id": "CWE-79",
+            "untested": False,
+            "attack_paths": [{"kind": "set_aside", "text": "guarded"}],
+        }
+        f["claims"] = {
+            name: {
+                "state": "CONFIDENT",
+                "evidence": "a.py:1",
+                "tool_check": {"command": "grep -n SINK a.py", "exit_code": 0},
+            }
+            for name in ("targeted", "no_new_vulnerability", "behaviour_unchanged")
         }
         self.assertIsNone(check_claims(f))
 
@@ -50,10 +69,20 @@ class PatchTest(unittest.TestCase):
                 ],
                 "independent_routes": ["static", "runtime"],
                 "reachability": {"active_in_default_config": True},
+                "poc_trace": [
+                    {"file": "a.py", "line": 1, "action": "input"},
+                    {"file": "a.py", "line": 2, "action": "guard"},
+                    {"file": "a.py", "line": 3, "action": "sink"},
+                ],
+                "preconditions": [],
+                "why_guard_fails": "value not covered",
+                "cwe_class": "Base",
+                "cwe_id": "CWE-79",
+                "panel_verdicts": {"R": "TRUE_POSITIVE", "I": "TRUE_POSITIVE", "D": "TRUE_POSITIVE"},
                 "claims": {
-                    "targeted": {"state": "CONFIDENT", "evidence": "a.py:1"},
-                    "no_new_vulnerability": {"state": "CONFIDENT", "evidence": "ok"},
-                    "behaviour_unchanged": {"state": "CONFIDENT", "evidence": "ok"},
+                    "targeted": {"state": "CONFIDENT", "evidence": "a.py:1", "tool_check": {"command": "grep -n SINK a.py", "exit_code": 0}},
+                    "no_new_vulnerability": {"state": "CONFIDENT", "evidence": "ok", "tool_check": {"command": "git diff --check", "exit_code": 0}},
+                    "behaviour_unchanged": {"state": "CONFIDENT", "evidence": "ok", "tool_check": {"command": "git diff --stat", "exit_code": 0}},
                 },
                 "attack_paths": [{"kind": "set_aside", "text": "guarded"}],
             }

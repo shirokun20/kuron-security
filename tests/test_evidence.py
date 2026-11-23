@@ -13,6 +13,15 @@ BASE = {
         "active_in_default_config": True,
     },
     "independent_routes": ["static", "runtime"],
+    "poc_trace": [
+        {"file": "a.py", "line": 1, "action": "input arrives"},
+        {"file": "a.py", "line": 2, "action": "guard evaluated"},
+        {"file": "a.py", "line": 3, "action": "sink reached"},
+    ],
+    "preconditions": ["default config"],
+    "why_guard_fails": "the guard does not cover this value",
+    "cwe_class": "Base",
+    "cwe_id": "CWE-79",
 }
 
 

@@ -28,7 +28,8 @@ class PolicyTest(unittest.TestCase):
         }
         self.assertEqual(check(policy, "enterprise", "CRITICAL", "tests/a.dart"), "block")
         self.assertEqual(check(policy, "personal", "CRITICAL", "tests/a.dart"), "allow")
-        self.assertEqual(check(policy, "enterprise", "HIGH", "src/a.dart"), "allow")
+        # Enterprise is deny-by-default: no matching rule still blocks.
+        self.assertEqual(check(policy, "enterprise", "HIGH", "src/a.dart"), "block")
 
     def test_attestation_is_deterministic(self):
         policy = {"version": 1, "sha256": "b" * 64, "profile_rules": {}}

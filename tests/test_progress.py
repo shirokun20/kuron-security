@@ -46,7 +46,7 @@ class ProgressTest(unittest.TestCase):
             first = append_event(d, {"phase": "Research", "status": "working"})
             second = append_event(d, {"phase": "Panel", "status": "done"})
             self.assertEqual((first["seq"], second["seq"]), (1, 2))
-            self.assertEqual(first["trace_id"], "local-1")
+            self.assertEqual(first["trace_id"], "")
             self.assertTrue(first["ts"].endswith("+00:00"))
             lines = (Path(d) / "progress.jsonl").read_text().splitlines()
             self.assertEqual(len(lines), 2)

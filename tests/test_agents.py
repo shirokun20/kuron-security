@@ -33,6 +33,29 @@ class AgentsTest(unittest.TestCase):
         res_text = (ROOT / "agents" / "researcher.md").read_text(encoding="utf-8").lower()
         self.assertIn("never build", res_text)
 
+    def test_frontmatter_is_parseable_and_tools_are_read_only(self):
+        names = (
+            "researcher", "verifier-reachability", "verifier-impact",
+            "verifier-defenses", "redactor", "patch-generator", "patch-verifier",
+        )
+        read_only = {"Read", "Glob", "Grep"}
+        forbidden = {"Write", "Edit", "Bash", "NotebookEdit", "Task", "Agent"}
+        for n in names:
+            text = (ROOT / "agents" / f"{n}.md").read_text(encoding="utf-8")
+            self.assertTrue(text.startswith("---\n"), n)
+            parts = text.split("---", 2)
+            self.assertEqual(len(parts), 3, n)
+            header = {}
+            for line in parts[1].strip().splitlines():
+                key, value = line.split(":", 1)
+                header[key.strip()] = value.strip()
+            self.assertEqual(header.get("name"), n)
+            self.assertTrue(header.get("description"), n)
+            tools = {t.strip() for t in header["tools"].strip("[]").split(",")}
+            self.assertTrue(tools, n)
+            self.assertTrue(tools <= read_only, (n, tools))
+            self.assertFalse(tools & forbidden, n)
+
     def test_redactor_schema_and_patch_generator_scratch(self):
         red = (ROOT / "agents" / "redactor.md").read_text(encoding="utf-8")
         self.assertIn("redaction.json", red)

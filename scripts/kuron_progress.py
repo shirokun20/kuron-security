@@ -15,8 +15,18 @@ import shutil
 import signal
 import sys
 import time
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+try:  # POSIX advisory locking
+    import fcntl
+except ImportError:  # pragma: no cover - platform dependent
+    fcntl = None
+try:  # Windows advisory locking
+    import msvcrt
+except ImportError:  # pragma: no cover - platform dependent
+    msvcrt = None
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
@@ -62,7 +72,7 @@ def elapsed_text(milliseconds: object) -> str:
 
 def progress_line(event: dict, width: int = 0) -> str:
     """Build one ASCII-only line; never let untrusted text change its shape."""
-    label = sanitize(event.get("label") or "kuron-panel", 24).encode("ascii", "replace").decode("ascii")
+    label = sanitize(event.get("label") or "unverified-single-pass", 24).encode("ascii", "replace").decode("ascii")
     phase = sanitize(event.get("phase") or "-", 8)
     phase_total = sanitize(event.get("phase_total") or "-", 8)
     try:
@@ -84,34 +94,60 @@ def progress_line(event: dict, width: int = 0) -> str:
     return line[:limit]
 
 
+@contextmanager
+def _exclusive_lock(lock_path: Path):
+    """Cross-platform exclusive advisory lock around the read-seq/write-append window."""
+    with lock_path.open("a+b") as handle:
+        if fcntl is not None:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        elif msvcrt is not None:  # pragma: no cover - platform dependent
+            handle.seek(0)
+            msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+        try:
+            yield
+        finally:
+            if fcntl is not None:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            elif msvcrt is not None:  # pragma: no cover - platform dependent
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+
+
 def append_event(run_dir: str, event: dict) -> dict:
-    """Append one progress event and return it with seq/ts/trace_id filled in."""
+    """Append one progress event with a caller-supplied trace_id (never synthetic)."""
     directory = Path(run_dir)
     directory.mkdir(parents=True, exist_ok=True)
     target = directory / "progress.jsonl"
-    seq = 1
-    if target.exists():
-        for raw in target.read_text(encoding="utf-8", errors="replace").splitlines():
-            try:
-                seq = max(seq, int(json.loads(raw).get("seq", 0)) + 1)
-            except (ValueError, TypeError, AttributeError):
-                continue
-    record = dict(event)
-    record["seq"] = seq
-    record["ts"] = datetime.now(timezone.utc).isoformat()
-    record["trace_id"] = str(record.get("trace_id") or f"local-{seq}")
-    with target.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(record, ensure_ascii=True, sort_keys=True) + "\n")
-        handle.flush()
+    with _exclusive_lock(directory / ".progress.lock"):
+        seq = 1
+        if target.exists():
+            for raw in target.read_text(encoding="utf-8", errors="replace").splitlines():
+                try:
+                    seq = max(seq, int(json.loads(raw).get("seq", 0)) + 1)
+                except (ValueError, TypeError, AttributeError):
+                    continue
+        record = dict(event)
+        record["seq"] = seq
+        record["ts"] = datetime.now(timezone.utc).isoformat()
+        # Fail closed: an event with no real trace id stays empty and is reported
+        # as unverifiable by validate_projection instead of inventing "local-N".
+        record["trace_id"] = str(record.get("trace_id") or "")
+        with target.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(record, ensure_ascii=True, sort_keys=True) + "\n")
+            handle.flush()
     return record
 
 
 def validate_projection(run_dir: str) -> tuple[bool, list[str]]:
-    """Every progress event must reference a real trace event."""
+    """Every progress event must reference a real trace event; absence fails closed."""
     directory = Path(run_dir)
     progress = directory / "progress.jsonl"
     if not progress.exists():
-        return True, []
+        return False, ["no progress events"]
+    raw_progress = progress.read_text(encoding="utf-8", errors="replace").splitlines()
+    if not raw_progress:
+        return False, ["empty progress stream"]
+
     trace = directory / "trace.jsonl"
     trace_ids: set[str] = set()
     if trace.exists():
@@ -122,15 +158,18 @@ def validate_projection(run_dir: str) -> tuple[bool, list[str]]:
                     trace_ids.add(str(value))
             except (ValueError, TypeError, AttributeError):
                 continue
+
     missing: list[str] = []
-    for raw in progress.read_text(encoding="utf-8", errors="replace").splitlines():
+    for raw in raw_progress:
         try:
             record = json.loads(raw)
         except (ValueError, TypeError):
             missing.append("unreadable progress line")
             continue
         trace_id = str(record.get("trace_id") or "")
-        if trace_id and trace_id not in trace_ids:
+        if not trace_id:
+            missing.append("<missing trace_id>")
+        elif trace_id not in trace_ids:
             missing.append(trace_id)
     return (not missing), missing
 

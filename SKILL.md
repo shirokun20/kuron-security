@@ -10,8 +10,12 @@ metadata:
 
 Kuron Security is a standalone, capability-adaptive security audit engine for
 multi-harness environments (`claude-code`, `opencode`, `omp`, `agy`, `muse`, and
-Orca orchestration). Baseline agent briefs are vendored clean-room in `agents/`;
-official plugin briefs are reused read-only only when present and matching.
+Orca orchestration). All agent briefs are vendored clean-room in `agents/`, and
+the SARIF/MD/JSONL builder in `scripts/` is vendored and deterministic. Nothing
+is imported from a user-writable plugin cache at runtime. Official
+`claude-security` may be installed separately as an optional reference for
+`kuron-panel` parity; it is never loaded, executed, or silently reused here.
+See README §"Relationship to `claude-security`" for the full provenance statement.
 
 ## Capability Preflight & Three Labels
 
@@ -27,6 +31,23 @@ and `select_path`) and `scripts/kuron_policy.py` (`validate`, `attestation`):
 
 Never claim `kuron-panel` or print `3/3 TP` unless the specialist panel actually
 ran. Never write `verified` or `unverified` as a calibration status.
+
+### Panel quorum (binding rule)
+
+Verifier lenses emit observed verdicts `TRUE_POSITIVE` / `FALSE_POSITIVE` for
+`R` (reachability), `I` (impact), and `D` (defenses). `kuron_products.py`
+computes the tally from those records — never from a model-written `confidence`
+field:
+
+- **Unanimous `TRUE_POSITIVE` across R, I, and D** → the finding is kept and
+  badged `3/3 TP` with the real per-lens tally.
+- **Any `FALSE_POSITIVE` or a missing lens verdict** → the finding is discarded
+  with a `discard_reason` (default posture is `FALSE_POSITIVE`).
+- **A `kuron-panel` / `ad-hoc-panel` label with no observed R/I/D verdicts** is
+  refused as a usage/policy error; it is never downgraded silently to a pass.
+- `kuron-panel` additionally requires an *observed* subagent panel launch during
+  the current run plus hash-present official briefs (`kuron_capabilities.py`
+  records `source: observed|declared|assumed` for every capability).
 
 ## Three Operating Tiers
 
@@ -52,9 +73,14 @@ Combine the time/token confirmation and any assurance-degradation consent
 Every finding MUST pass `validate_finding` / `filter_findings` before panel:
 - `taint_path`: complete `source` → `guard` → `sink` with `{role, file, line, snippet}`.
 - `reachability`: `{entrypoint, hops, active_in_default_config: true}`.
-- `poc_trace`: 3–7 static steps, `preconditions[]`, `why_guard_fails` (no code execution).
-- `independent_routes`: at least 2 distinct route IDs.
-- `cwe_class`: validated Base or Class.
+- `poc_trace`: 3–7 static steps `{file, line, action}`, `preconditions[]`, and a
+  non-empty `why_guard_fails` (no code execution).
+- `independent_routes`: at least 2 distinct *verification method families*
+  (`trace:`, `grep:`, `git-*`, `lens-*`, `static`, `runtime`), not merely two
+  differently-named strings from the same tool.
+- `cwe_class`: a known CWE Base/Class ID or Base/Class kind with a valid `cwe_id`.
+- `reachability.active_in_default_config` must be exactly `true` (omission is
+  rejected), and `line: 0` is a valid hop location.
 
 Dead paths (`active_in_default_config: false`), `admin_only`, `test_fixture`, or
 incomplete chains are dropped pre-panel and recorded in `discarded[]` with `discard_reason`.
@@ -73,16 +99,33 @@ incomplete chains are dropped pre-panel and recorded in `discarded[]` with `disc
 4. Researchers (`agents/researcher.md`, read-only, `<untrusted_repository_data>`)
 5. `scripts/kuron_evidence.py` → `filter_findings` (kept vs `discarded[]`)
 6. 3-Lens Panel (`agents/verifier-reachability.md`, `verifier-impact.md`, `verifier-defenses.md`) — may only keep or **lower** severity, never raise
-7. `scripts/kuron_trace.py` → allowlisted read-only verification commands (`git show`, `git grep`, `grep`, `nl`, `sed -n`, `python3 -c`) logged with `exit_code` + `trace_id`
+7. `scripts/kuron_trace.py` → allowlisted read-only verification commands
+   (`git show`, `git grep`, `grep`, `nl`, `sed -n`) with full-argv flag policies,
+   realpath scan-root confinement, isolated git config, and a 256 KiB output cap.
+   The arbitrary Python expression slot was deliberately removed — it permits
+   unrestricted code execution. Every call is logged with `exit_code`,
+   `trace_id`, and `truncated`.
 8. Fail-closed Redaction (`agents/redactor.md` → `redaction.json`)
-9. `scripts/kuron_products.py <report dir> <scan root>` → renders all 4 mandatory artifacts (`KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`, `KURON-SECURITY-REVISION-<tag>.json`), calls `kuron_redaction.enforce` (fail-closed on missing `redaction.json`, `status != "clean"`, or `not cleaned:`), and prints the open-rail `KURON SECURITY · SCAN SCORECARD` summary.
+9. `scripts/kuron_products.py <report dir> <scan root>` → renders all 4 mandatory
+   artifacts (`KURON-SECURITY-RESULTS.md`, `.jsonl`, `.sarif`,
+   `KURON-SECURITY-REVISION-<tag>.json`) into `.staging-<uuid>/`, calls
+   `kuron_redaction.enforce` **and** an independent stdlib secret scan there, then
+   atomically promotes with `os.replace` only on success (staging is removed on
+   any failure, so no unredacted artifact ever reaches the report directory).
+   The human scorecard is ASCII-only on **stderr**; stdout carries one machine
+   status line. Exit codes: `0` clean/low, `1` HIGH/CRITICAL kept, `2`
+   usage/policy error, `3` redaction-gate failure.
 
 ## Live Progress (event stream first, renderer second)
 
 `scripts/kuron_progress.py` owns progress. `append_event(run_dir, event)` adds one
 append-only record to `<run dir>/progress.jsonl` with `seq`, `ts`, and a
-`trace_id` that must exist in `trace.jsonl` — `validate_projection(run_dir)`
-enforces this, so no status is ever shown without a real event. Event fields:
+caller-supplied `trace_id` that must exist in `trace.jsonl` —
+`validate_projection(run_dir)` enforces this **fail-closed**: a missing or empty
+progress stream, an empty `trace_id`, or an absent `trace.jsonl` are all
+unverifiable and are reported rather than passed. No synthetic `local-N` ids are
+generated. Writes are serialized with a cross-platform exclusive lock
+(`fcntl`/`msvcrt`) so concurrent waves cannot lose or mis-number events. Event fields:
 `phase`, `phase_total`, `label` (provenance), `agent_id`, `role`, `status`,
 `done`, `total`, `elapsed_ms`, `message`.
 
@@ -94,11 +137,29 @@ enforces this, so no status is ever shown without a real event. Event fields:
 
 Never use alternate-screen, never enter raw/cbreak mode, and never read keys:
 agent harnesses capture stdout, close stdin, and often have no TTY. stdout stays
-clean for JSONL/SARIF and scorecards. All untrusted text is stripped of ANSI and
+machine-clean (artifacts plus one JSON status line); all human scorecards go to
+**stderr** as ASCII. All untrusted text is stripped of ANSI and
 control characters and forced to ASCII before display. `finish()` prints one
 honest final line; signal handlers clean up the live line on SIGINT/SIGTERM.
 Interactive TUI drill-down is an optional renderer for harnesses that support
 it — it is not part of the default pipeline.
+
+## Per-host enforcement matrix
+
+Agent briefs carry `name:` / `description:` / `tools:` frontmatter with a
+**read-only** tool list. That frontmatter is a capability boundary only on hosts
+that implement it. On every host, the Python allowlist in `kuron_trace.py` is the
+binding enforcement layer.
+
+| Host | `tools:` frontmatter honored? | Binding read-only enforcement |
+|---|---|---|
+| Claude Code (agent dirs / `.claude/agents`) | Yes — agent frontmatter is parsed | `tools:` allowlist **and** `kuron_trace.verify_command` |
+| Antigravity / omp / muse | No — briefs are prompt text | `kuron_trace.verify_command` only |
+| OpenCode / Codex | No — prompt text (or different schema) | `kuron_trace.verify_command` only |
+| Orca / other orchestrators | No — prompt text | `kuron_trace.verify_command` only |
+
+The frontmatter is harmless where ignored and protective where honored; the
+script gate is the single cross-host contract. Never rely on prompt text alone.
 
 ## Invariants (no exceptions)
 

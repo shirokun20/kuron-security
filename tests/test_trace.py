@@ -10,7 +10,7 @@ class TraceTest(unittest.TestCase):
     def test_allowlist_exact(self):
         self.assertEqual(
             ALLOWLIST,
-            ("git show", "git grep", "grep", "nl", "sed -n", "python3 -c"),
+            ("git show", "git grep", "grep", "nl", "sed -n"),
         )
 
     def test_append_writes_jsonl(self):

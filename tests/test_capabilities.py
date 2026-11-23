@@ -19,7 +19,11 @@ class CapabilityTest(unittest.TestCase):
                     "has_git",
                     "has_network",
                     "plugin_briefs_available",
+                    "plugin_briefs_sha256",
+                    "panel_launch_observed",
                     "shell_git_dialect",
+                    "capability_sources",
+                    "sources",
                 },
             )
             self.assertEqual(caps["harness"], "agy")
@@ -33,6 +37,9 @@ class CapabilityTest(unittest.TestCase):
             "has_git": True,
             "has_network": False,
             "plugin_briefs_available": True,
+            "plugin_briefs_sha256": "a" * 64,
+            "panel_launch_observed": True,
+            "capability_sources": {"panel_launch_observed": "observed"},
             "shell_git_dialect": "posix",
         }
         res = select_path(caps, "enterprise", consent=None)

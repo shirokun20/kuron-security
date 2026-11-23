@@ -27,6 +27,15 @@ class ProductsTest(unittest.TestCase):
             ],
             "reachability": {"entrypoint": "a.py:1", "hops": [], "active_in_default_config": True},
             "independent_routes": ["static", "runtime"],
+            "poc_trace": [
+                {"file": "a.py", "line": 1, "action": "input"},
+                {"file": "a.py", "line": 2, "action": "guard"},
+                {"file": "a.py", "line": 3, "action": "sink"},
+            ],
+            "preconditions": [],
+            "why_guard_fails": "value not covered",
+            "cwe_class": "Base",
+            "cwe_id": "CWE-79",
         }
         out = normalize(raw, 0)
         self.assertIsNotNone(out)
@@ -48,12 +57,17 @@ class ProductsTest(unittest.TestCase):
             (report / "scan-meta.json").write_text(
                 json.dumps({"mode": "scan", "label": "ad-hoc-panel"}), encoding="utf-8"
             )
-            buf = io.StringIO()
-            with contextlib.redirect_stdout(buf):
-                main(str(report), os.getcwd())
-            stdout = buf.getvalue()
-            self.assertIn("╭─", stdout)
-            self.assertIn("SCAN SCORECARD", stdout)
+            stdout_buf = io.StringIO()
+            stderr_buf = io.StringIO()
+            with contextlib.redirect_stdout(stdout_buf), contextlib.redirect_stderr(stderr_buf):
+                rc = main(str(report), os.getcwd())
+            self.assertEqual(rc, 0)
+            stdout = stdout_buf.getvalue()
+            stderr = stderr_buf.getvalue()
+            self.assertNotIn("╭", stderr)
+            self.assertTrue(stderr.isascii(), stderr)
+            self.assertIn("SCAN SCORECARD", stderr)
+            self.assertIn('"exit_code": 0', stdout)
             names = set(os.listdir(report))
             self.assertIn("KURON-SECURITY-RESULTS.md", names)
             self.assertIn("KURON-SECURITY-RESULTS.jsonl", names)
