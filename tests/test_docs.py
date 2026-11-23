@@ -7,13 +7,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DocsTest(unittest.TestCase):
     def test_versions_consistent(self):
-        self.assertIn("version: 2.2.0", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
+        self.assertIn("version: 2.2.1", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
         self.assertEqual(
             json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"],
-            "2.2.0",
+            "2.2.1",
         )
         m = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
-        self.assertEqual(m["plugins"][0]["version"], "2.2.0")
+        self.assertEqual(m["plugins"][0]["version"], "2.2.1")
 
     def test_skill_declares_labels_and_tiers(self):
         t = (ROOT / "SKILL.md").read_text(encoding="utf-8")

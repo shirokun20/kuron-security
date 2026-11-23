@@ -10,7 +10,7 @@
     {
       "name": "kuron-security",
       "description": "Capability-adaptive, evidence-first security audit pipeline (codebase scan, scan changes, suggest patches) with 3-lens adversarial refutation, isolated scratch-clone patching, three operating tiers (personal, bisnis, enterprise), honest provenance labels, and fail-closed redaction.",
-      "version": "2.2.0",
+      "version": "2.2.1",
       "author": {
         "name": "shirokun20"
       },
