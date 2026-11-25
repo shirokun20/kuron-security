@@ -61,8 +61,8 @@ ONLY acted-on value is an id matching `^F[0-9]{1,9}$`, else literal
    findings, enforce four-eyes review (two independent verifier agents + user
    approval recorded in `trace.jsonl`) before patching. Open the progress
    stream with `scripts/kuron_progress.py` and render to stderr only.
-1. `scripts/kuron_patch.py --prepare <report dir> <selection>
-   --repo-root <repo root> --base <PATCH BASE>`.
+1. `scripts/kuron_patch.py prepare <report dir> <selection>
+   --repo-root <repo root> --base <PATCH BASE>` (legacy `--prepare` still works).
    Scan root = stamp `scan_prefix` joined to REPO ROOT.
    Units = printed ids in order; `skipped_stale` (precondition-found)
    units get no workspace and go straight to record.
@@ -75,8 +75,8 @@ ONLY acted-on value is an id matching `^F[0-9]{1,9}$`, else literal
    contract, staged diff, and record `untested` / `tests_run` honestly.
 5. Judge: objection -> one revision round; second objection declines.
 6. Redact (`agents/redactor.md` -> `redaction.json`) and render via
-   `scripts/kuron_patch.py <patch dir> <report dir>/patches/ <repo root>
-   --base <PATCH BASE>` (gates on evidence, stamps honest label + `untested`
+   `scripts/kuron_patch.py render <patch dir> <report dir>/patches/ <repo root>
+   --base <PATCH BASE>` (legacy `--render` still works; gates on evidence, stamps honest label + `untested`
    when tests did not run, and enforces fail-closed redaction).
 
 ## Report to the user

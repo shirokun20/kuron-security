@@ -10,12 +10,14 @@ on every harness, regardless of whether agent frontmatter ``tools:`` is honored.
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
 import re
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 # "python3 -c" was removed deliberately: an expression slot is arbitrary code
@@ -26,10 +28,25 @@ ALLOWLIST: tuple[str, ...] = (
     "grep",
     "nl",
     "sed -n",
+    "sg",
 )
 
 _FORBIDDEN_SHELL_TOKENS = (";", "&&", "|", ">", "<", "`", "$(")
 MAX_OUTPUT_BYTES = 256 * 1024
+
+# ast-grep is accepted only as a read-only query: run/scan subcommands, query
+# flags, and realpath-confined paths. Rewrite/interactive/debug-query flags are
+# denied explicitly rather than silently ignored.
+_SG_SUBCOMMANDS = ("run", "scan")
+_SG_VALUE_FLAGS = frozenset({"--pattern", "-p", "--lang", "-l", "--globs"})
+_SG_BOOL_FLAGS = frozenset({"--json"})
+_SG_PREFIXES = ("--pattern=", "--json=", "--globs=")
+_SG_DENY = frozenset(
+    {
+        "--rewrite", "-r", "-U", "--update-all", "-i", "--interactive",
+        "--debug-query",
+    }
+)
 
 # Per-command argv policy. ``flags`` are exact allowed switches; ``prefixes``
 # are allowed switches that carry an attached value (``--format=...``); ``deny``
@@ -159,6 +176,13 @@ _COMMAND_SPECS: dict[str, dict] = {
         "max_args": 12,
         "confine_colon_paths": False,
     },
+    "sg": {
+        "flags": _SG_BOOL_FLAGS,
+        "prefixes": _SG_PREFIXES,
+        "deny": _SG_DENY,
+        "max_args": 16,
+        "confine_colon_paths": False,
+    },
 }
 
 
@@ -197,6 +221,42 @@ def _sed_script_safe(script: str) -> bool:
     return bool(_SED_PRINT_ONLY.match(script.strip()))
 
 
+def _validate_sg_argv(rest: list[str], root: str) -> None:
+    """Validate an ast-grep query: read-only flags, bounded args, confined paths."""
+    if not rest or rest[0] not in _SG_SUBCOMMANDS:
+        raise CommandNotAllowed("sg requires the read-only 'run' or 'scan' subcommand")
+    args = rest[1:]
+    spec = _COMMAND_SPECS["sg"]
+    if len(args) > spec["max_args"]:
+        raise CommandNotAllowed(f"Too many arguments for 'sg' (max {spec['max_args']})")
+    has_pattern = False
+    idx = 0
+    while idx < len(args):
+        token = args[idx]
+        idx += 1
+        if token in _SG_DENY or token.split("=", 1)[0] in _SG_DENY:
+            raise CommandNotAllowed(f"Flag {token!r} is explicitly denied for 'sg'")
+        if token in _SG_VALUE_FLAGS:
+            if idx >= len(args):
+                raise CommandNotAllowed(f"Flag {token!r} requires a value")
+            value = args[idx]
+            idx += 1
+            if value in _SG_DENY or value.split("=", 1)[0] in _SG_DENY:
+                raise CommandNotAllowed(f"Flag {token!r} requires a safe value")
+            if token in ("--pattern", "-p"):
+                has_pattern = True
+            continue
+        if token in _SG_BOOL_FLAGS or token.startswith(_SG_PREFIXES):
+            if token.startswith("--pattern="):
+                has_pattern = True
+            continue
+        if token.startswith("-"):
+            raise CommandNotAllowed(f"Flag {token!r} is not allowed for 'sg'")
+        _confine_path(token, root)
+    if not has_pattern:
+        raise CommandNotAllowed("sg requires --pattern/-p for a read-only query")
+
+
 def _validate_argv(argv: list[str], prefix: str, root: str) -> None:
     spec = _COMMAND_SPECS[prefix]
     rest = argv[len(prefix.split()) :]
@@ -204,6 +264,9 @@ def _validate_argv(argv: list[str], prefix: str, root: str) -> None:
         raise CommandNotAllowed(
             f"Too many arguments for '{prefix}' (max {spec['max_args']})"
         )
+    if prefix == "sg":
+        _validate_sg_argv(rest, root)
+        return
     if prefix == "sed -n":
         if len(rest) < 2:
             raise CommandNotAllowed("sed -n requires a script and at least one file")
@@ -317,3 +380,38 @@ def verify_command(command: str, cwd: str, trace_path: str) -> dict:
     }
     append(trace_path, {"event": "verify_command", **result})
     return result
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Kuron Security read-only trace runner")
+    sub = parser.add_subparsers(dest="command", required=True)
+    a = sub.add_parser("append", help="append one JSON trace event")
+    a.add_argument("trace_path")
+    a.add_argument("event_json")
+    v = sub.add_parser("verify", help="run an allowlisted read-only command")
+    v.add_argument("command")
+    v.add_argument("--cwd", required=True)
+    v.add_argument("--trace", required=True)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        if args.command == "append":
+            event = json.loads(args.event_json)
+            if not isinstance(event, dict):
+                raise ValueError("event_json must be a JSON object")
+            append(args.trace_path, event)
+            result = {"appended": True}
+        else:
+            result = verify_command(args.command, args.cwd, args.trace)
+    except (CommandNotAllowed, OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

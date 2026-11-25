@@ -1,0 +1,14 @@
+# Synthetic lockfile snippet. Not from any real project.
+lockfileVersion: '9.0'
+
+importers:
+  .:
+    dependencies:
+      synth-util:
+        specifier: ^0.1.0
+        version: 0.1.0
+
+packages:
+  synth-util@0.1.0:
+    resolution: {integrity: sha512-synthetic}
+    dev: false

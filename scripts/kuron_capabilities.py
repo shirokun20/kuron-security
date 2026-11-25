@@ -9,11 +9,13 @@ strongest provenance label.
 
 from __future__ import annotations
 
+import argparse
 import glob
 import hashlib
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 VALID_TIERS = ("personal", "bisnis", "enterprise")
@@ -46,7 +48,39 @@ HARNESS_DEFAULTS = {
         "agent_types": ["security-reviewer", "research"],
         "tools": ["read", "write", "subagent", "ask"],
     },
+    "codex": {
+        "agent_types": ["security-reviewer", "general"],
+        "tools": ["read", "write", "subagent", "ask"],
+    },
+    "cursor": {
+        "agent_types": ["security-reviewer", "explore"],
+        "tools": ["read", "write", "subagent", "ask"],
+    },
+    "cline": {
+        "agent_types": ["research", "security-reviewer"],
+        "tools": ["read", "write", "subagent", "ask"],
+    },
+    "copilot-cli": {
+        "agent_types": ["general", "explore"],
+        "tools": ["read", "write", "subagent", "ask"],
+    },
+    "orca": {
+        "agent_types": ["security-reviewer", "general"],
+        "tools": ["read", "write", "subagent", "ask"],
+    },
 }
+
+# An active session marker is direct evidence of the harness running this code;
+# it outranks the caller-declared KURON_HARNESS and any binary-name inference.
+_HARNESS_ENV_MARKERS: tuple[tuple[str, str], ...] = (
+    ("CLAUDECODE", "claude-code"),
+    ("OPENCODE", "opencode"),
+    ("ORCA_SESSION_ID", "orca"),
+    ("CODEX_CI", "codex"),
+    ("CURSOR_TRACE_ID", "cursor"),
+    ("CLINE_TASK_ID", "cline"),
+    ("COPILOT_CLI", "copilot-cli"),
+)
 
 
 class CapabilityError(Exception):
@@ -98,9 +132,12 @@ def _briefs_digest(paths: list[str]) -> str | None:
 
 
 def _detect_harness(harness: str | None) -> tuple[str, str]:
-    """Return (harness, source) where source is observed/declared/assumed."""
+    """Return (harness, source): argument, session marker, declared env, then binary."""
     if harness:
         return harness, "observed"
+    for marker, name in _HARNESS_ENV_MARKERS:
+        if os.environ.get(marker, "").strip():
+            return name, "observed"
     env_harness = os.environ.get("KURON_HARNESS", "").strip()
     if env_harness:
         return env_harness, "declared"
@@ -242,3 +279,37 @@ def select_path(caps: dict, tier: str, consent: str | None) -> dict:
         "agent_types_used": agent_types_used,
         "panel_source": "observed" if label == "kuron-panel" else _source_of(caps, "agent_types"),
     }
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Kuron Security capability probe")
+    sub = parser.add_subparsers(dest="command", required=True)
+    p = sub.add_parser("probe", help="probe capabilities and write capabilities.json")
+    p.add_argument("root")
+    p.add_argument("out_path")
+    p.add_argument("--harness")
+    p.add_argument("--panel-launch-observed", action="store_true")
+    s = sub.add_parser("select-path", help="select a verification path")
+    s.add_argument("caps_path")
+    s.add_argument("--tier", choices=VALID_TIERS, required=True)
+    s.add_argument("--consent", choices=("accept", "decline"))
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        if args.command == "probe":
+            result = probe(args.root, args.out_path, args.harness, args.panel_launch_observed)
+        else:
+            with open(args.caps_path, encoding="utf-8") as fh:
+                result = select_path(json.load(fh), args.tier, args.consent)
+    except (CapabilityError, OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

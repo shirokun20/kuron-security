@@ -1,9 +1,11 @@
+import io
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr
 from pathlib import Path
 from kuron_evidence import REQUIRED_TAINT_ROLES
-from kuron_patch import check_claims, cmd_render
+from kuron_patch import _print_scorecard, check_claims, cmd_render
 from kuron_redaction import RedactionError
 
 
@@ -41,6 +43,28 @@ class PatchTest(unittest.TestCase):
             for name in ("targeted", "no_new_vulnerability", "behaviour_unchanged")
         }
         self.assertIsNone(check_claims(f))
+
+    def test_scorecard_gates_are_derived_not_hardcoded(self):
+        unit = {
+            "id": "F1",
+            "status": "patch_written",
+            "attempts": 1,
+            "claims": {
+                "targeted": {
+                    "state": "CONFIDENT",
+                    "evidence": "a.py:1",
+                    "tool_check": {"command": "grep -n SINK a.py"},
+                },
+                "no_new_vulnerability": {"state": "UNTESTED", "evidence": "x"},
+            },
+        }
+        err = io.StringIO()
+        with redirect_stderr(err):
+            _print_scorecard("abc123456789", [unit], "patches")
+        scorecard = err.getvalue()
+        self.assertIn("TARGETED [ok]", scorecard)
+        self.assertIn("NO_NEW_VULN [fail]", scorecard)
+        self.assertIn("BEHAVIOUR_UNCHANGED [missing]", scorecard)
 
     def test_cmd_render_enforces_redaction_and_untested_label(self):
         with tempfile.TemporaryDirectory() as d:

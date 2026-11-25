@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Kuron Security",
+          "semanticVersion": "2.3.0",
+          "rules": [
+            {
+              "id": "CWE-200",
+              "name": "CWE_200",
+              "shortDescription": {
+                "text": "Proxy credentials leak to HTTPS destination on redirect via Proxy-Authorization header"
+              },
+              "fullDescription": {
+                "text": "On a redirect to an https:// endpoint, rebuild_proxies() computes the target scheme at :316 but its guard at :327 checks only username/password, so it reattaches Proxy-Authorization to the prepared request. urllib3 cannot strip that header before the CONNECT tunnel, so proxy credentials reach the destination server (CVE-2023-32681)."
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "CWE-200",
+          "level": "warning",
+          "message": {
+            "text": "Proxy credentials leak to HTTPS destination on redirect via Proxy-Authorization header"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "requests/sessions.py"
+                },
+                "region": {
+                  "startLine": 328
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "kuronPrimaryLocationHash": "a68a99db2ba934a36804fb87f71252b5ee1d21e92b5fa53fc960bebbafc614a3"
+          },
+          "properties": {
+            "id": "F1",
+            "severity": "MEDIUM",
+            "label": "ad-hoc-panel",
+            "panel_tally": {
+              "R": "TP",
+              "I": "TP",
+              "D": "TP",
+              "ran": true,
+              "unanimous_tp": true
+            }
+          },
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "requests/sessions.py"
+                          },
+                          "region": {
+                            "startLine": 317,
+                            "snippet": {
+                              "text": "new_proxies = resolve_proxies(prepared_request, proxies, self.trust_env)"
+                            }
+                          }
+                        },
+                        "message": {
+                          "text": "attacker/config-supplied proxy URL with credentials is resolved"
+                        }
+                      },
+                      "kinds": [
+                        "taint"
+                      ],
+                      "properties": {
+                        "role": "source"
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "requests/sessions.py"
+                          },
+                          "region": {
+                            "startLine": 327,
+                            "snippet": {
+                              "text": "if username and password:"
+                            }
+                          }
+                        },
+                        "message": {
+                          "text": "credential-presence guard omits the scheme check computed at :316"
+                        }
+                      },
+                      "kinds": [
+                        "taint"
+                      ],
+                      "properties": {
+                        "role": "guard"
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "requests/sessions.py"
+                          },
+                          "region": {
+                            "startLine": 328,
+                            "snippet": {
+                              "text": "headers[\"Proxy-Authorization\"] = _basic_auth_str(username, password)"
+                            }
+                          }
+                        },
+                        "message": {
+                          "text": "credential header is attached to the prepared HTTPS request"
+                        }
+                      },
+                      "kinds": [
+                        "taint"
+                      ],
+                      "properties": {
+                        "role": "sink"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "Patch for F1"
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "requests/sessions.py"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 324,
+                        "endLine": 330
+                      },
+                      "insertedContent": {
+                        "text": "        # urllib3 handles proxy authorization for us in the standard adapter.\n        # Avoid appending this to TLS tunneled requests where it may be leaked.\n        if not scheme.startswith('https') and username and password:\n"
+                      }
+                    }
+                  ]
+                }
+              ],
+              "properties": {
+                "path": "patches/F1.patch",
+                "status": "patch_written"
+              }
+            }
+          ]
+        }
+      ],
+      "properties": {
+        "engine": "kuron-security",
+        "builder": "vendored",
+        "verification": "ad-hoc-panel",
+        "attestation": {},
+        "discarded_count": 0
+      }
+    }
+  ]
+}

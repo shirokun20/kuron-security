@@ -8,7 +8,14 @@ from contextlib import redirect_stderr
 from pathlib import Path
 from unittest import mock
 
-from kuron_patch import check_claims, cmd_prepare, cmd_render, main
+from kuron_patch import (
+    REQUIRED_CLAIMS,
+    _gate_status,
+    check_claims,
+    cmd_prepare,
+    cmd_render,
+    main,
+)
 from kuron_redaction import RedactionError
 
 VALID_FINDING = {
@@ -58,6 +65,18 @@ class PatchHardeningTest(unittest.TestCase):
         err = check_claims(unit)
         self.assertIsNotNone(err)
         self.assertIn("tool_check", err)
+
+    def test_gate_status_never_assumes_a_pass(self):
+        for name in REQUIRED_CLAIMS:
+            with self.subTest(name=name):
+                self.assertEqual(_gate_status({}, name), "[missing]")
+                self.assertEqual(
+                    _gate_status({"claims": {name: {"state": "CONFIDENT", "evidence": "x"}}}, name),
+                    "[fail]",
+                )
+                self.assertEqual(
+                    _gate_status({"claims": {name: claim()}}, name), "[ok]"
+                )
 
     def test_verifiable_claims_accepted(self):
         unit = dict(VALID_FINDING)

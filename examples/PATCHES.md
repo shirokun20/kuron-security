@@ -1,8 +1,13 @@
 # Patches
 
-- F1: patch written (kuron-panel, review-only: no covering test) — Path traversal file write via unsanitized remote sourceId into configs directory
-- F2: patch written (kuron-panel, review-only: no covering test) — Path traversal arbitrary file delete via unsanitized remote sourceId on uninstall
-- F3: patch written (kuron-panel, review-only: no covering test) — Path traversal file write via unsanitized remote sourceId in icon cache persistence
-- F4: no patch — Second objection stands: declared central-directory sizes are attacker-controlled (zeroed, zip64-sentinel skipped, lying offsets return null), so the pre-decode scan passes and decodeBytes still inflates a real bomb before post-decode checks run. Only bounded streaming inflation fully closes this; the patch raises the bar (catches honest-huge archives) but cannot guarantee it with this decode API. No patch written after 2 attempts.
+This example is a **public, historical, already-patched CVE**: CVE-2023-32681 in
+`psf/requests` at pre-fix commit `302225334678490ec66b3614a9dddb8a02c5f4fe`.
+The diff in `F1.patch` is the published upstream fix from commit
+[`74ea7cf7`](https://github.com/psf/requests/commit/74ea7cf7a6a27a4eeb2ae24e162bcc942a6706d5),
+which adds the missing `scheme.startswith('https')` guard in
+`Session.rebuild_proxies`.
 
-Apply: `git apply <report>/patches/F<n>.patch` per file.
+- **F1** — `patches/F1.patch` — `git apply --check` clean against the pre-fix checkout. Review-only: no patch test or application was executed by this scan example. The SARIF fix record in `KURON-SECURITY-RESULTS.sarif` is derived from this exact diff.
+
+Apply in a scratch clone only: `git apply examples/F1.patch`. Kuron Security never
+applies, commits, pushes, or opens a PR without an explicit user request.

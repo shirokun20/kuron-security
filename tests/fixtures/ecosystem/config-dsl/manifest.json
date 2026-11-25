@@ -1,0 +1,7 @@
+{
+  "name": "synthetic-config-dsl",
+  "description": "Synthetic manifest; no real extension code.",
+  "tokenPattern": "^(a+)+$",
+  "regex": "(a+)+$",
+  "validation": { "scheme": "https", "timeoutMs": 1000 }
+}

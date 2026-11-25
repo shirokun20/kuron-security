@@ -1,0 +1,12 @@
+{
+  "name": "synthetic-ext-fetcher",
+  "description": "Synthetic secondary fetch config; no real extension code.",
+  "secondaryFetch": {
+    "urlPatterns": [
+      "file:///etc/passwd",
+      "gopher://127.0.0.1:6379/",
+      "http://169.254.169.254/latest/meta-data/",
+      "https://example.test/fetch"
+    ]
+  }
+}

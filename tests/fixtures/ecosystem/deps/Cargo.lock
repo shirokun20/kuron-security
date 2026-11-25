@@ -1,0 +1,8 @@
+# Synthetic lockfile snippet. Not from any real project.
+version = 3
+
+[[package]]
+name = "synth-util"
+version = "0.1.0"
+source = "registry+https://github.example.test/synth-index"
+checksum = "0000000000000000000000000000000000000000000000000000000000000000"

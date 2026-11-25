@@ -7,13 +7,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class DocsTest(unittest.TestCase):
     def test_versions_consistent(self):
-        self.assertIn("version: 2.2.1", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
+        self.assertIn("version: 2.3.0", (ROOT / "SKILL.md").read_text(encoding="utf-8"))
         self.assertEqual(
             json.loads((ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))["version"],
-            "2.2.1",
+            "2.3.0",
         )
         m = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
-        self.assertEqual(m["plugins"][0]["version"], "2.2.1")
+        self.assertEqual(m["plugins"][0]["version"], "2.3.0")
+        sarif = (ROOT / "scripts" / "kuron_sarif.py").read_text(encoding="utf-8")
+        self.assertIn('SARIF_SEMANTIC_VERSION = "2.3.0"', sarif)
 
     def test_skill_declares_labels_and_tiers(self):
         t = (ROOT / "SKILL.md").read_text(encoding="utf-8")
@@ -46,10 +48,53 @@ class DocsTest(unittest.TestCase):
         self.assertIn("Live Scan Progress", readme)
         self.assertIn("progress.jsonl", readme)
         self.assertIn("flowchart TD", readme)
-        self.assertIn("no reserved-ID guard at :56", readme)
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")
         self.assertIn("validate_projection", skill)
         self.assertIn("alternate-screen", skill)
+
+    def test_readme_documents_public_historical_cve_proof(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        for s in (
+            "CVE-2023-32681",
+            "psf/requests",
+            "302225334678490ec66b3614a9dddb8a02c5f4fe",
+            "74ea7cf7",
+            "source -> guard -> sink",
+            "requests/sessions.py:328",
+            "## Trust Story",
+            "## Limitations",
+            "## Running Tests",
+            "PYTHONPATH=scripts python3 -m unittest discover -s tests -p 'test_*.py' -v",
+            "pytest -v",
+        ):
+            self.assertIn(s, readme)
+        # 3/3 unanimous quorum everywhere; no 2/3 gate survives in the diagram.
+        self.assertIn("3/3 unanimous TRUE_POSITIVE?", readme)
+        self.assertIn("3/3 unanimous `TRUE_POSITIVE`", readme)
+        self.assertNotIn(">= 2 TRUE_POSITIVE", readme)
+        self.assertNotIn("no reserved-ID guard at :56", readme)
+        for name in ("demo.gif", "demo-poster.png", "social-preview.png"):
+            self.assertIn(f"docs/assets/{name}", readme)
+            asset = ROOT / "docs" / "assets" / name
+            self.assertTrue(asset.is_file(), f"missing asset {asset}")
+            self.assertGreater(asset.stat().st_size, 0)
+
+    def test_examples_are_public_and_leak_free(self):
+        for name in (
+            "KURON-SECURITY-RESULTS.md",
+            "KURON-SECURITY-RESULTS.sarif",
+            "F1.patch",
+            "PATCHES.md",
+        ):
+            path = ROOT / "examples" / name
+            self.assertTrue(path.is_file(), f"missing example {path}")
+            text = path.read_text(encoding="utf-8")
+            self.assertNotIn("[REDACTED]", text)
+            self.assertNotIn("learn_flutter", text)
+        report = (ROOT / "examples" / "KURON-SECURITY-RESULTS.md").read_text(encoding="utf-8")
+        self.assertIn("`3/3 TRUE_POSITIVE`", report)
+        self.assertIn("CVE-2023-32681", report)
+        self.assertIn("requests/sessions.py:328", report)
 
     def test_docs_match_hardened_behavior(self):
         skill = (ROOT / "SKILL.md").read_text(encoding="utf-8")

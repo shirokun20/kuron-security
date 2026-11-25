@@ -6,10 +6,24 @@ import tempfile
 import unittest
 from pathlib import Path
 from kuron_evidence import REQUIRED_TAINT_ROLES
-from kuron_products import main, normalize
+from kuron_products import METER_WIDTH, _meter_filled, main, normalize
 
 
 class ProductsTest(unittest.TestCase):
+    def test_meter_scaling_bounded_and_consistent(self):
+        self.assertEqual(_meter_filled(0, 0), 0)
+        self.assertEqual(_meter_filled(0, 5), 0)
+        self.assertEqual(_meter_filled(5, 5), METER_WIDTH)
+        self.assertEqual(_meter_filled(1, 8), 3)  # 2.5 rounds up, not banker's 2
+        self.assertEqual(_meter_filled(1, 40), 1)
+        self.assertEqual(_meter_filled(100, 1), METER_WIDTH)
+        for total in range(1, 25):
+            for count in range(total + 1):
+                filled = _meter_filled(count, total)
+                self.assertTrue(0 <= filled <= METER_WIDTH)
+                if count < total:
+                    self.assertLessEqual(filled, _meter_filled(count + 1, total))
+
     def test_normalize_drops_invalid_evidence(self):
         raw = {"id": "F1", "file": "a.py", "line": 1, "snippet": "x", "taint_path": []}
         out = normalize(raw, 0)

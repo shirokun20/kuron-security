@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 import re
+import sys
 
 REQUIRED_TAINT_ROLES = ("source", "guard", "sink")
 
@@ -27,6 +30,8 @@ CWE_BASE_CLASS_IDS: frozenset[str] = frozenset(
         "CWE-829", "CWE-833", "CWE-835", "CWE-862", "CWE-863", "CWE-901",
         "CWE-908", "CWE-918", "CWE-921", "CWE-922", "CWE-926", "CWE-929",
         "CWE-937", "CWE-939", "CWE-943", "CWE-913", "CWE-1188",
+        "CWE-326", "CWE-327", "CWE-328", "CWE-330", "CWE-1236",
+        "CWE-1321", "CWE-1336", "CWE-1333",
     }
 )
 VALID_CWE_CLASS_KINDS = frozenset({"base", "class"})
@@ -160,3 +165,39 @@ def filter_findings(findings: list[dict]) -> tuple[list[dict], list[dict]]:
         else:
             discarded.append({**f, "discard_reason": "; ".join(reasons)})
     return kept, discarded
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Kuron Security evidence contract")
+    sub = parser.add_subparsers(dest="command", required=True)
+    for name, help_text in (
+        ("validate", "validate one finding from a JSON file"),
+        ("filter", "partition a JSON list of findings"),
+    ):
+        cmd = sub.add_parser(name, help=help_text)
+        cmd.add_argument("path")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        with open(args.path, encoding="utf-8") as fh:
+            data = json.load(fh)
+        if args.command == "validate":
+            ok, reasons = validate_finding(data)
+            result = {"ok": ok, "reasons": reasons}
+        else:
+            if not isinstance(data, list):
+                raise ValueError("findings file must be a JSON list")
+            kept, discarded = filter_findings(data)
+            result = {"kept": kept, "discarded": discarded}
+    except (OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

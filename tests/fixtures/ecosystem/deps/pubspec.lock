@@ -1,0 +1,12 @@
+# Synthetic lockfile snippet. Not from any real project.
+sdks:
+  dart: ">=3.0.0 <4.0.0"
+
+packages:
+  synth_util:
+    dependency: "direct main"
+    description:
+      name: synth_util
+      url: "https://pub.example.test"
+    source: hosted
+    version: "0.1.0"

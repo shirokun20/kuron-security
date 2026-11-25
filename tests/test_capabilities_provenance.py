@@ -4,7 +4,10 @@ from pathlib import Path
 from unittest import mock
 
 from kuron_capabilities import (
+    HARNESS_DEFAULTS,
     CapabilityError,
+    _HARNESS_ENV_MARKERS,
+    _detect_harness,
     plugin_brief_paths,
     plugin_script_paths,
     probe,
@@ -41,10 +44,45 @@ class CapabilityProvenanceTest(unittest.TestCase):
             self.assertIn(sources["has_git"], ("observed", "assumed"))
 
     def test_harness_source_is_declared_from_env(self):
+        clean = {marker: "" for marker, _ in _HARNESS_ENV_MARKERS}
         with tempfile.TemporaryDirectory() as d:
-            with mock.patch.dict("os.environ", {"KURON_HARNESS": "agy"}):
+            with mock.patch.dict("os.environ", {**clean, "KURON_HARNESS": "agy"}):
                 data = probe(d, str(Path(d) / "c.json"))
             self.assertEqual(data["capability_sources"]["harness"], "declared")
+
+    def test_2026_harness_profiles_match_schema(self):
+        for name in ("codex", "cursor", "cline", "copilot-cli", "orca"):
+            with self.subTest(name=name):
+                profile = HARNESS_DEFAULTS[name]
+                self.assertTrue(profile["agent_types"])
+                self.assertTrue(all(isinstance(a, str) for a in profile["agent_types"]))
+                self.assertIn("read", profile["tools"])
+                self.assertIn("write", profile["tools"])
+
+    def test_detect_harness_precedence(self):
+        clean = {marker: "" for marker, _ in _HARNESS_ENV_MARKERS}
+        clean["KURON_HARNESS"] = ""
+        with mock.patch.dict("os.environ", clean):
+            with mock.patch("kuron_capabilities.shutil.which", return_value="/usr/bin/omp"):
+                self.assertEqual(_detect_harness(None), ("omp", "assumed"))
+                self.assertEqual(_detect_harness("cursor"), ("cursor", "observed"))
+                with mock.patch.dict("os.environ", {"KURON_HARNESS": "codex"}):
+                    self.assertEqual(_detect_harness(None), ("codex", "declared"))
+                    self.assertEqual(_detect_harness("cline"), ("cline", "observed"))
+                for marker, name in _HARNESS_ENV_MARKERS:
+                    with self.subTest(marker=marker):
+                        with mock.patch.dict("os.environ", {marker: "1"}):
+                            self.assertEqual(_detect_harness(None), (name, "observed"))
+
+    def test_probe_harness_observed_from_active_session_marker(self):
+        clean = {marker: "" for marker, _ in _HARNESS_ENV_MARKERS}
+        with tempfile.TemporaryDirectory() as d:
+            with mock.patch.dict(
+                "os.environ", {**clean, "OPENCODE": "1", "KURON_HARNESS": "agy"}
+            ):
+                data = probe(d, str(Path(d) / "c.json"))
+            self.assertEqual(data["harness"], "opencode")
+            self.assertEqual(data["capability_sources"]["harness"], "observed")
 
     def test_panel_requires_observed_launch(self):
         data = caps(panel_launch_observed=False)

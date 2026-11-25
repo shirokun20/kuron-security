@@ -8,6 +8,7 @@ often capture stdout, close stdin, and run without a TTY.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
@@ -189,13 +190,17 @@ class ProgressRenderer:
         self.mode = mode or detected["mode"]
         self.width = width if width is not None else detected["columns"]
         self.min_interval_ms = min_interval_ms
-        self._last = 0.0
+        self._last: float | None = None  # first render is never throttled
         self._active = False
         self._final: str | None = None
 
     def render(self, event: dict, force: bool = False) -> str:
         now = time.monotonic()
-        if not force and (now - self._last) * 1000 < self.min_interval_ms:
+        if (
+            not force
+            and self._last is not None
+            and (now - self._last) * 1000 < self.min_interval_ms
+        ):
             return ""
         self._last = now
         line = progress_line(event, self.width)
@@ -241,3 +246,39 @@ def install_signal_handlers(renderer: ProgressRenderer, final_text: str = "inter
             signal.signal(sig, handler)
         except (ValueError, OSError):
             pass
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Kuron Security scan progress")
+    sub = parser.add_subparsers(dest="command", required=True)
+    a = sub.add_parser("append", help="append one JSON progress event")
+    a.add_argument("run_dir")
+    a.add_argument("event_json")
+    v = sub.add_parser("validate", help="validate progress against trace ids")
+    v.add_argument("run_dir")
+    sub.add_parser("detect", help="report terminal mode")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        if args.command == "append":
+            event = json.loads(args.event_json)
+            if not isinstance(event, dict):
+                raise ValueError("event_json must be a JSON object")
+            result = append_event(args.run_dir, event)
+        elif args.command == "validate":
+            ok, missing = validate_projection(args.run_dir)
+            result = {"ok": ok, "missing": missing}
+        else:
+            result = detect_terminal()
+    except (OSError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

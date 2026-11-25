@@ -1,68 +1,15 @@
-# Patch for F1: Path traversal file write via unsanitized remote sourceId into configs directory
-# Trust label: kuron-panel (reviewed by an independent patch reviewer plus a fresh diff challenger; not the official verified stamp).
-# TARGETED (helper _cachedSourceFile used only at the 3 file-path sinks: remote_config_service.dart:424 (write), :478 (delete), :620 (restore))
-# NO_NEW_VULNERABILITY (allowlist ^[A-Za-z0-9_-]{1,64}$ + p.normalize + p.isWithin contain at :380-393; remaining $sourceId uses are prefs keys/log strings, no new File/write sink)
-# BEHAVIOUR_UNCHANGED (legit ids pass through identical '$sourceId-config.json' path; only invalid ids now throw FormatException (write/delete) or skip+continue (restore :621-623))
-# Notice: no test in the project's suite covers the patched code; this claim rests on review alone.
-# Apply: git apply /Users/asix/Documents/learn_flutter/nhasixapp/KURON-SECURITY-20261121-115809/patches//F1.patch
-diff --git a/lib/core/config/remote_config_service.dart b/lib/core/config/remote_config_service.dart
-index 38221833..3d6ad3b6 100644
---- a/lib/core/config/remote_config_service.dart
-+++ b/lib/core/config/remote_config_service.dart
-@@ -376,6 +376,23 @@ class RemoteConfigService {
-     );
-   }
+diff --git a/requests/sessions.py b/requests/sessions.py
+index 6cb3b4da..dbcf2a7b 100644
+--- a/requests/sessions.py
++++ b/requests/sessions.py
+@@ -324,7 +324,9 @@ class SessionRedirectMixin:
+         except KeyError:
+             username, password = None, None
  
-+  static final RegExp _safeSourceId = RegExp(r'^[A-Za-z0-9_-]{1,64}$');
-+
-+  /// Trust boundary for remote-supplied [sourceId]: allowlist charset only,
-+  /// rejecting separators, `..`, absolute paths, and empty values, then
-+  /// canonicalizes and contains the final path under [configDir].
-+  static File _cachedSourceFile(Directory configDir, String sourceId) {
-+    if (!_safeSourceId.hasMatch(sourceId)) {
-+      throw FormatException('Invalid sourceId: "$sourceId"');
-+    }
-+    final filePath = p.normalize(p.join(configDir.path, '$sourceId-config.json'));
-+    final basePath = p.normalize(configDir.path);
-+    if (!p.isWithin(basePath, filePath)) {
-+      throw FormatException('Invalid sourceId: "$sourceId"');
-+    }
-+    return File(filePath);
-+  }
-+
-   // Applies a source config from raw JSON string, persists it to cache,
-   // updates in-memory maps, and stores version metadata when available.
-   Future<SourceConfig> applySourceConfigFromJson({
-@@ -404,7 +421,7 @@ class RemoteConfigService {
-     final parsed = SourceConfig.fromJson(decoded);
+-        if username and password:
++        # urllib3 handles proxy authorization for us in the standard adapter.
++        # Avoid appending this to TLS tunneled requests where it may be leaked.
++        if not scheme.startswith('https') and username and password:
+             headers["Proxy-Authorization"] = _basic_auth_str(username, password)
  
-     final configDir = await _getConfigDirectory();
--    final cachedFile = File(p.join(configDir.path, '$sourceId-config.json'));
-+    final cachedFile = _cachedSourceFile(configDir, sourceId);
-     await cachedFile.writeAsString(jsonEncode(decoded));
- 
-     final version = decoded['version'] as String?;
-@@ -458,7 +475,7 @@ class RemoteConfigService {
-     }
- 
-     final configDir = await _getConfigDirectory();
--    final cachedFile = File(p.join(configDir.path, '$sourceId-config.json'));
-+    final cachedFile = _cachedSourceFile(configDir, sourceId);
-     if (cachedFile.existsSync()) {
-       await cachedFile.delete();
-     }
-@@ -598,7 +615,13 @@ class RemoteConfigService {
-     );
- 
-     for (final sourceId in installedIds) {
--      final cachedFile = File(p.join(configDir.path, '$sourceId-config.json'));
-+      late final File cachedFile;
-+      try {
-+        cachedFile = _cachedSourceFile(configDir, sourceId);
-+      } on FormatException catch (e) {
-+        _logger.w('Skipping installed source with invalid id: $e');
-+        continue;
-+      }
-       if (!cachedFile.existsSync()) {
-         _logger.w('Cached config not found for installed source: $sourceId');
-         continue;
+         return new_proxies

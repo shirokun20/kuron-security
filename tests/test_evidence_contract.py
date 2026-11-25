@@ -61,6 +61,18 @@ class EvidenceContractTest(unittest.TestCase):
         self.assertFalse(ok)
         self.assertTrue(any("poc_trace[0]" in r for r in why))
 
+    def test_added_crypto_and_injection_cwes_accepted(self):
+        for cwe in (
+            "CWE-326", "CWE-327", "CWE-328", "CWE-330", "CWE-1236",
+            "CWE-1321", "CWE-1336", "CWE-1333",
+        ):
+            with self.subTest(cwe=cwe):
+                self.assertIn(cwe, CWE_BASE_CLASS_IDS)
+                f = copy.deepcopy(BASE)
+                f["cwe_class"] = cwe
+                f["cwe_id"] = cwe
+                self.assertTrue(reasons(f)[0], reasons(f)[1])
+
     def test_cwe_class_rejects_unknown(self):
         f = copy.deepcopy(BASE)
         f["cwe_class"] = "CWE-999999"

@@ -3,8 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 
@@ -19,6 +21,17 @@ SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("github-token", re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36,}\b")),
     ("github-fine-grained-pat", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{40,}\b")),
     ("slack-token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b")),
+    # Anthropic keys are checked first so the openai pattern can exclude them.
+    ("anthropic-key", re.compile(r"\bsk-ant-[A-Za-z0-9_-]{20,}\b")),
+    ("openai-key", re.compile(r"\bsk-(?!ant-)(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,}\b")),
+    (
+        "google-api-key",
+        re.compile(r"(?<![A-Za-z0-9_-])AIza[0-9A-Za-z_-]{35}(?![A-Za-z0-9_-])"),
+    ),
+    (
+        "gitlab-pat",
+        re.compile(r"(?<![A-Za-z0-9_-])glpat-[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])"),
+    ),
     (
         "private-key",
         re.compile(r"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----"),
@@ -62,3 +75,41 @@ def enforce(report_dir: str, artifacts: list[str]) -> None:
         text = p.read_text(encoding="utf-8", errors="replace")
         if "not cleaned:" in text:
             raise RedactionError(f"Unredacted marker 'not cleaned:' found in {p}")
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Kuron Security redaction gate")
+    sub = parser.add_subparsers(dest="command", required=True)
+    s = sub.add_parser("scan", help="list secret pattern names found in text or a file")
+    s.add_argument("path", nargs="?")
+    s.add_argument("--text")
+    e = sub.add_parser("enforce", help="fail closed on an unredacted report")
+    e.add_argument("report_dir")
+    e.add_argument("artifacts", nargs="*")
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = build_parser().parse_args(argv)
+    try:
+        if args.command == "scan":
+            if (args.path is None) == (args.text is None):
+                print("error: provide exactly one of path or --text", file=sys.stderr)
+                return 2
+            text = (
+                args.text if args.text is not None
+                else Path(args.path).read_text(encoding="utf-8", errors="replace")
+            )
+            result = scan_secrets(text)
+        else:
+            enforce(args.report_dir, args.artifacts)
+            result = {"ok": True}
+    except (OSError, RedactionError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(result, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,2 @@
+# Unified-diff context lines are a single space by syntax, not stray whitespace.
+examples/F1.patch -whitespace

@@ -120,6 +120,33 @@ class TraceHardeningTest(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 self.assertIsInstance(_validate_command(cmd, str(self.root)), list)
 
+    # ast-grep: read-only queries only
+    def test_sg_readonly_queries_accepted(self):
+        for cmd in (
+            "sg run -p 'foo($X)' --lang python f.txt",
+            "sg scan --pattern foo --lang py --json f.txt",
+            "sg scan --pattern=foo --json=compact --globs '*.py'",
+        ):
+            with self.subTest(cmd=cmd):
+                self.assertIsInstance(_validate_command(cmd, str(self.root)), list)
+
+    def test_sg_mutation_interactive_and_path_escapes_rejected(self):
+        for cmd in (
+            "sg run -p foo -r f.txt",
+            "sg run -p foo --rewrite 'bar' f.txt",
+            "sg run -p foo -U f.txt",
+            "sg run -p foo --update-all f.txt",
+            "sg run -p foo -i f.txt",
+            "sg run -p foo --interactive f.txt",
+            "sg run -p foo --debug-query f.txt",
+            "sg run f.txt",
+            "sg scan --lang py f.txt",
+            "sg run -p foo ../../etc/passwd",
+            "sg scan --pattern foo /etc/passwd",
+        ):
+            with self.subTest(cmd=cmd), self.assertRaises(CommandNotAllowed):
+                _validate_command(cmd, str(self.root))
+
     # #2 - environment isolation
     def test_git_config_isolated_across_platforms(self):
         env = _git_isolated_env()

@@ -2,13 +2,17 @@
 """Kuron Security patch products: clean-room implementation of the behavior
 described in the official patch-spec.md. No official code is copied.
 
-  kuron_patch.py --prepare <report dir> <selection> --repo-root <dir> --base <sha>
-  kuron_patch.py --render <patch dir> <patches dir> <repo root> --base <sha>
+  kuron_patch.py prepare <report dir> <selection> --repo-root <dir> --base <sha>
+  kuron_patch.py render <patch dir> <patches dir> <repo root> --base <sha>
+
+The legacy ``--prepare`` / ``--render`` spellings remain accepted as aliases.
 
 Report dirs are KURON-SECURITY-<timestamp>. Provenance labels are never implied
 by self-attested CONFIDENT marks: each claim must carry verifiable tool-check
 evidence. Human scorecards go to stderr in ASCII; stdout stays machine-clean.
 """
+
+from __future__ import annotations
 
 import argparse
 import json
@@ -26,6 +30,11 @@ from kuron_trace import append as trace_append
 VALID_LABELS = ("kuron-panel", "ad-hoc-panel", "unverified-single-pass")
 PANEL_LABELS = ("kuron-panel", "ad-hoc-panel")
 REQUIRED_CLAIMS = ("targeted", "no_new_vulnerability", "behaviour_unchanged")
+SCORECARD_GATES = (
+    ("TARGETED", "targeted"),
+    ("NO_NEW_VULN", "no_new_vulnerability"),
+    ("BEHAVIOUR_UNCHANGED", "behaviour_unchanged"),
+)
 UNIT_RE = re.compile(r"^F[0-9]{1,9}$")
 REPORT_RE = re.compile(r"^KURON-SECURITY-[0-9][0-9-]*\Z")
 
@@ -39,7 +48,7 @@ def git(args: list[str], cwd: str) -> subprocess.CompletedProcess:
     env = dict(os.environ, GIT_TERMINAL_PROMPT="0", GIT_CONFIG_NOSYSTEM="1",
                GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_SYSTEM=os.devnull)
     return subprocess.run(
-        ["git", "-C", cwd, *args], capture_output=True, text=True, env=env
+        ["git", "-C", cwd, *args], capture_output=True, text=True, env=env, timeout=30
     )
 
 
@@ -140,6 +149,19 @@ def check_claims(unit: dict) -> str | None:
             ):
                 return f"{unit['id']}: bad attack path"
     return None
+
+
+def _gate_status(unit: dict, claim_name: str) -> str:
+    """Scorecard gate derived from claims: [ok] only for verified CONFIDENT claims."""
+    claims = unit.get("claims")
+    if not isinstance(claims, dict):
+        return "[missing]"
+    claim = claims.get(claim_name)
+    if not isinstance(claim, dict):
+        return "[missing]"
+    if str(claim.get("state") or "").strip().upper() == "CONFIDENT" and _claim_verified(claim):
+        return "[ok]"
+    return "[fail]"
 
 
 def _ascii(value: object, limit: int = 80) -> str:
@@ -360,10 +382,10 @@ def _print_scorecard(base: str, units: list[dict], patches_display: str) -> None
         )
         emit(f"|  {badge:<10} {fid} - {title}")
         if st == "patch_written":
-            emit(
-                f"|             Gate  : TARGETED [ok] | NO_NEW_VULN [ok] | "
-                f"BEHAVIOUR_UNCHANGED [ok] (attempts={att})"
+            gates = " | ".join(
+                f"{display} {_gate_status(u, name)}" for display, name in SCORECARD_GATES
             )
+            emit(f"|             Gate  : {gates} (attempts={att})")
             emit(f"|             Check : git apply --check ({chk_str})")
             emit(f"|             Apply : git apply {patches_display}/{fid}.patch")
         else:
@@ -377,12 +399,12 @@ def _print_scorecard(base: str, units: list[dict], patches_display: str) -> None
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Kuron Security patch products")
     sub = parser.add_subparsers(dest="command", required=True)
-    prep = sub.add_parser("--prepare", help="prepare patch units from a report")
+    prep = sub.add_parser("prepare", aliases=["--prepare"], help="prepare patch units from a report")
     prep.add_argument("report_dir")
     prep.add_argument("selection")
     prep.add_argument("--repo-root", required=True)
     prep.add_argument("--base", required=True)
-    ren = sub.add_parser("--render", help="render verified patches")
+    ren = sub.add_parser("render", aliases=["--render"], help="render verified patches")
     ren.add_argument("patch_dir")
     ren.add_argument("patches_dir")
     ren.add_argument("repo_root")
@@ -392,14 +414,20 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
-    if args.command == "--prepare":
+    cli_args = list(sys.argv[1:] if argv is None else argv)
+    # argparse treats a leading "--prepare" as an option, not a subcommand;
+    # normalize the legacy spellings before parsing to keep them working.
+    if cli_args and cli_args[0] in ("--prepare", "--render"):
+        cli_args[0] = cli_args[0].lstrip("-")
+    args = parser.parse_args(cli_args)
+    command = str(args.command).lstrip("-")
+    if command == "prepare":
         return cmd_prepare(args.report_dir, args.selection, args.repo_root, args.base)
-    if args.command == "--render":
+    if command == "render":
         return cmd_render(args.patch_dir, args.patches_dir, args.repo_root, args.base)
     parser.print_help()
     return 2
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

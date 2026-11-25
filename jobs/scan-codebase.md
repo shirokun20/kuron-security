@@ -13,7 +13,8 @@ with them when unclear, else `medium`.
   injection-and-input, auth-and-access, memory-and-unsafe,
   crypto-and-secrets; managed-language components skip
   memory-and-unsafe with the reason recorded), one sweep over
-  unread files, secrets pass when focus set, 3-lens panel (keep >=2).
+  unread files, secrets pass when focus set, 3-lens panel (3/3 unanimous
+  TRUE_POSITIVE required; any FALSE_POSITIVE or missing lens discards).
 - `high` — as medium: up to 48 components (24 when the file count is
   unknown), two researchers per component x lens, two sweeps.
 
@@ -51,7 +52,13 @@ stated as an assumption). Large tree: recommend scoped first.
 3. Scan root = absolute repo path. Create `KURON-SECURITY-<ts>/.kuron-security-run`
    and write `scan-meta.json` (with `label`, `tier`, `attestation`).
 4. Partition: whole repo -> one component per top-level source dir
-   (cap above applies); scoped -> scope dirs are the components.
+   (cap above applies); scoped -> scope dirs are the components. Auto-select
+   rulepacks with `scripts/kuron_policy.py select-rulepacks <scan root>`:
+   `tauri.conf.json` -> `rules/tauri.md`, `pubspec.yaml` ->
+   `rules/flutter.md`, `manifest.json` / DSL markers (`secondaryFetch`,
+   `urlPatterns`, `tokenPattern`) -> `rules/config-dsl.md`. Add the selected
+   packs to researcher checklists; never execute config scripts or dependency
+   code. The walk is bounded and offline; report `truncated` if it hits a cap.
 5. Threat-model recon (medium/high): one read-only researcher per component
    reporting entryPoints, sinks, hotFiles (JSON).
 6. Research in waves of <=8 dispatches using `agents/researcher.md` (read-only).

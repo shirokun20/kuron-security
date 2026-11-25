@@ -1,0 +1,16 @@
+{
+  "$schema": "synthetic-tauri-config",
+  "identifier": "com.example.test.synthetic",
+  "app": {
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'"
+    },
+    "windows": [{ "title": "Synthetic", "label": "main" }]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "YOUR_PUBKEY_HERE",
+      "endpoints": ["https://updates.example.test/{{target}}/{{version}}"]
+    }
+  }
+}
