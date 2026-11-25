@@ -8,6 +8,7 @@
 [![agentskill.sh](https://img.shields.io/badge/agentskill.sh-listed-brightgreen)](https://agentskill.sh/@shirokun20/kuron-security)
 [![skillsmd](https://img.shields.io/badge/skillsmd-submitted-lightgrey)](https://skillsmd.dev/)
 [![Sponsor](https://img.shields.io/badge/sponsor-shirokun20-ff69b4)](https://github.com/sponsors/shirokun20)
+[![M8ven Score](https://m8ven.ai/badge/mcp/shirokun20-kuron-security-tpuyxk?v=0aec0d41ce52a4e726c51b56795d86fe)](https://m8ven.ai/mcp/shirokun20-kuron-security-tpuyxk?s=readme)
 
 **Run Anthropic's Claude Security pipeline on any 2026 AI coding agent — no proprietary `Workflow` tool required.**
 
