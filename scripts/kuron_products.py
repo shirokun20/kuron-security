@@ -149,6 +149,8 @@ def main(report_dir: str, scan_root: str) -> int:
     jsonl_name = "KURON-SECURITY-RESULTS.jsonl"
     sarif_name = "KURON-SECURITY-RESULTS.sarif"
     artifacts = [md_name, jsonl_name, sarif_name, rev_name]
+    # The staged trace event is scanned too, but trace.jsonl is appended to the
+    # live ledger rather than promoted over it (see below).
     promotion = artifacts + ["trace.jsonl"]
 
     staging = Path(report_dir) / f".staging-{uuid.uuid4().hex}"
@@ -187,8 +189,16 @@ def main(report_dir: str, scan_root: str) -> int:
                 raise RedactionError(
                     f"independent secret scan failed in {name}: {', '.join(sorted(set(found)))}"
                 )
-        for name in promotion:
+        for name in artifacts:
             os.replace(staging / name, Path(report_dir) / name)
+        # trace.jsonl is an append-only ledger shared with kuron_progress and
+        # kuron_trace. Promote the products, then append the render event to
+        # the live ledger so earlier verify/progress events and their
+        # trace_ids stay intact.
+        render_trace = (staging / "trace.jsonl").read_text(encoding="utf-8")
+        if render_trace:
+            with (Path(report_dir) / "trace.jsonl").open("a", encoding="utf-8") as fh:
+                fh.write(render_trace)
     except RedactionError as exc:
         return _status(EXIT_REDACTION, f"redaction gate failed: {exc}")
     except OSError as exc:

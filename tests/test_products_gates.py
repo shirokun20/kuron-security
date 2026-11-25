@@ -196,3 +196,26 @@ class ProductsGatesTest(unittest.TestCase):
         self.assertEqual(code, EXIT_CLEAN)
         stamp = json.loads(next(self.report.glob("KURON-SECURITY-REVISION-*.json")).read_text())
         self.assertEqual(stamp["label"], "unverified-single-pass")
+
+    def test_render_products_appends_to_existing_trace_ledger(self):
+        trace = self.report / "trace.jsonl"
+        original = [
+            {"event": "verify_command", "trace_id": "tid-1", "command": "grep -n x a.py"},
+            {"event": "dispatch", "trace_id": "tid-2"},
+        ]
+        trace.write_text(
+            "".join(json.dumps(event) + "\n" for event in original), encoding="utf-8"
+        )
+        self.setup_report([make_finding(verdicts=TP)], {"label": "kuron-panel"})
+        code, out, _ = self.run_main()
+        self.assertEqual(code, EXIT_CLEAN, out)
+        events = [
+            json.loads(line)
+            for line in trace.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        # Earlier verify/progress events and their trace_ids survive promotion.
+        self.assertEqual(events[: len(original)], original)
+        render_events = [event for event in events if event.get("event") == "render_products"]
+        self.assertEqual(len(render_events), 1)
+        self.assertEqual(render_events[0]["label"], "kuron-panel")

@@ -245,10 +245,21 @@ def select_path(caps: dict, tier: str, consent: str | None) -> dict:
         and bool(caps.get("plugin_briefs_sha256"))
         and _source_of(caps, "panel_launch_observed") == "observed"
     )
+    # A static HARNESS_DEFAULTS table is only an assumption: never claim an
+    # ad-hoc panel from it alone. Require an observed or caller-declared
+    # subagent capability, mirroring the kuron-panel provenance rule.
+    subagent_source = next(
+        (
+            source
+            for source in (_source_of(caps, "agent_types"), _source_of(caps, "tools"))
+            if source in ("observed", "declared")
+        ),
+        None,
+    )
     if "security-reviewer" in agent_types and observed_panel:
         label = "kuron-panel"
         agent_types_used = ["security-reviewer"]
-    elif has_subagent:
+    elif has_subagent and subagent_source:
         label = "ad-hoc-panel"
         used = [a for a in ("research", "security-reviewer") if a in agent_types]
         if not used:
@@ -277,7 +288,11 @@ def select_path(caps: dict, tier: str, consent: str | None) -> dict:
         "label": label,
         "backend": backend,
         "agent_types_used": agent_types_used,
-        "panel_source": "observed" if label == "kuron-panel" else _source_of(caps, "agent_types"),
+        "panel_source": (
+            "observed"
+            if label == "kuron-panel"
+            else (subagent_source or _source_of(caps, "agent_types"))
+        ),
     }
 
 
@@ -289,6 +304,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("out_path")
     p.add_argument("--harness")
     p.add_argument("--panel-launch-observed", action="store_true")
+    # The runbook spells the invocation ``probe --json``. JSON is the only
+    # output form, so accept the flag as a no-op instead of erroring out.
+    p.add_argument(
+        "--json",
+        action="store_true",
+        help="accepted for compatibility; probe always prints JSON",
+    )
     s = sub.add_parser("select-path", help="select a verification path")
     s.add_argument("caps_path")
     s.add_argument("--tier", choices=VALID_TIERS, required=True)

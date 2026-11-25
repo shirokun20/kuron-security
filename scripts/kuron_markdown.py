@@ -144,6 +144,37 @@ def _taint_nodes(finding: dict) -> dict[str, tuple[str, str]]:
     return nodes
 
 
+def _poc_trace_parts(finding: dict) -> tuple[list, list, object]:
+    """Normalize the documented ``poc_trace`` shapes for rendering.
+
+    ``poc_trace`` is valid as a list of steps, an object
+    ``{steps, preconditions, why_guard_fails}``, or (defensively) a single
+    string. Slicing the raw value is only safe for a list, so normalize
+    first; nested ``preconditions`` / ``why_guard_fails`` in the object form
+    take precedence over missing top-level fields.
+    """
+    poc = finding.get("poc_trace")
+    preconditions = finding.get("preconditions")
+    why = finding.get("why_guard_fails")
+    if isinstance(poc, dict):
+        steps = poc.get("steps")
+        if preconditions is None:
+            preconditions = poc.get("preconditions")
+        if not why:
+            why = poc.get("why_guard_fails")
+    elif isinstance(poc, list):
+        steps = poc
+    elif isinstance(poc, str):
+        steps = [poc]
+    else:
+        steps = []
+    if not isinstance(steps, list):
+        steps = []
+    if not isinstance(preconditions, list):
+        preconditions = []
+    return steps[:64], preconditions, why
+
+
 def _patch_status(finding: dict, patches: dict) -> str:
     info = patches.get(str(finding.get("id") or "")) if isinstance(patches, dict) else None
     if not isinstance(info, dict):
@@ -209,7 +240,8 @@ def _advisory_card(finding: dict, label: str, patches: dict) -> list[str]:
             "",
         ]
     )
-    for step in (finding.get("poc_trace") or [])[:64]:
+    steps, preconditions, why = _poc_trace_parts(finding)
+    for step in steps:
         if isinstance(step, dict):
             where = f"{step.get('file', '?')}:{step.get('line', '?')}"
             lines.append(
@@ -217,12 +249,18 @@ def _advisory_card(finding: dict, label: str, patches: dict) -> list[str]:
             )
         else:
             lines.append(f"- {_md(step, 160)}")
+    lines.extend(["", "**preconditions**", ""])
+    if preconditions:
+        for pre in preconditions:
+            lines.append(f"- {_md(pre, 160)}")
+    else:
+        lines.append("- none recorded")
     lines.extend(
         [
             "",
             "**why_guard_fails**",
             "",
-            f"> {_md(finding.get('why_guard_fails') or 'not recorded', 400)}",
+            f"> {_md(why or 'not recorded', 400)}",
             "",
             "</details>",
             "",

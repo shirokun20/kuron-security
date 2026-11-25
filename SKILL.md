@@ -2,11 +2,11 @@
 name: kuron-security
 description: "Capability-adaptive, evidence-first security audit skill (codebase scan, scan changes, suggest patches) for 2026 AI agent harnesses. Enforces runtime capability probing, taint-chain evidence contracts, three operating tiers (personal, bisnis, enterprise), honest provenance labels (kuron-panel, ad-hoc-panel, unverified-single-pass), and fail-closed redaction."
 metadata:
-  version: 2.3.0
+  version: 2.3.1
   updated: 2026-11-25
 ---
 
-# Kuron Security v2.3.0 (Capability-Adaptive, Evidence-First Security Audit)
+# Kuron Security v2.3.1 (Capability-Adaptive, Evidence-First Security Audit)
 
 Kuron Security is a standalone, capability-adaptive security audit engine for
 multi-harness environments (`claude-code`, `opencode`, `omp`, `agy`, `muse`, and

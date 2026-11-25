@@ -17,7 +17,7 @@ import sys
 from kuron_quorum import compute_panel_tally
 
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
-SARIF_SEMANTIC_VERSION = "2.3.0"
+SARIF_SEMANTIC_VERSION = "2.3.1"
 
 _MAX_TAINT_STEPS = 64
 _MAX_PATCH_LINES = 2000

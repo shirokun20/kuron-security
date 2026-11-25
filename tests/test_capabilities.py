@@ -56,12 +56,36 @@ class CapabilityTest(unittest.TestCase):
             "has_git": True,
             "has_network": False,
             "plugin_briefs_available": False,
+            "capability_sources": {"agent_types": "declared", "tools": "declared"},
             "shell_git_dialect": "posix",
         }
         with self.assertRaises(CapabilityError):
             select_path(caps, "personal", consent=None)
         res = select_path(caps, "personal", consent="accept")
         self.assertEqual(res["label"], "ad-hoc-panel")
+        self.assertEqual(res["panel_source"], "declared")
+
+    def test_select_path_does_not_claim_ad_hoc_panel_from_assumed_capability(self):
+        # HARNESS_DEFAULTS lists subagent tools/agents from a static table.
+        # With only "assumed" provenance that must not become a panel claim.
+        caps = {
+            "harness": "opencode",
+            "agent_types": ["security-reviewer", "general", "explore"],
+            "tools": ["read", "write", "subagent", "ask", "git"],
+            "has_git": True,
+            "has_network": False,
+            "plugin_briefs_available": False,
+            "panel_launch_observed": False,
+            "capability_sources": {
+                "harness": "observed",
+                "agent_types": "assumed",
+                "tools": "assumed",
+                "panel_launch_observed": "assumed",
+            },
+            "shell_git_dialect": "posix",
+        }
+        res = select_path(caps, "personal", consent="accept")
+        self.assertEqual(res["label"], "unverified-single-pass")
 
     def test_select_path_single_pass_requires_consent(self):
         caps = {

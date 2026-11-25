@@ -38,7 +38,16 @@ RULEPACK_CONTENT_MARKERS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("config-dsl", ("secondaryFetch", "urlPatterns", "tokenPattern")),
 )
 _SCAN_SKIP_DIRS = frozenset(
-    {".git", "node_modules", "target", "build", "dist", ".dart_tool", "__pycache__"}
+    {
+        ".git",
+        ".vscode",  # editor settings are not ecosystem config DSLs
+        "node_modules",
+        "target",
+        "build",
+        "dist",
+        ".dart_tool",
+        "__pycache__",
+    }
 )
 _SCAN_CONFIG_SUFFIXES = (".json", ".yaml", ".yml", ".toml", ".js", ".ts")
 _SCAN_MAX_DEPTH = 3

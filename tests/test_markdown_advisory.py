@@ -84,6 +84,32 @@ class AdvisoryCardTest(unittest.TestCase):
         self.assertIn("- `input.py:1` — input", doc)
         self.assertIn("- `svc.py:9` — sink reached", doc)
 
+    def test_poc_trace_object_form_renders_without_keyerror(self):
+        # SKILL documents the object form; the renderer used to slice the dict
+        # directly and raised KeyError: slice(None, 64, None).
+        obj_finding = finding(
+            poc_trace={
+                "steps": [
+                    {"file": "input.py", "line": 1, "action": "input"},
+                    {"file": "svc.py", "line": 4, "action": "guard evaluated"},
+                    {"file": "svc.py", "line": 9, "action": "sink reached"},
+                ],
+                "preconditions": ["authenticated user", "debug mode enabled"],
+                "why_guard_fails": "nested guard bypass",
+            },
+            preconditions=None,
+            why_guard_fails=None,
+        )
+        doc = self.document(obj_finding)
+        self.assertIn("- `input.py:1` — input", doc)
+        self.assertIn("- `svc.py:9` — sink reached", doc)
+        self.assertIn("- authenticated user", doc)
+        self.assertIn("> nested guard bypass", doc)
+
+    def test_poc_trace_string_form_renders_without_keyerror(self):
+        doc = self.document(finding(poc_trace="single free-text step"))
+        self.assertIn("- single free-text step", doc)
+
     def test_patch_status_none_when_no_patch(self):
         doc = self.document(patch_map={})
         self.assertIn("| none |", doc)

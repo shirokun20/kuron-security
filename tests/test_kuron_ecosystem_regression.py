@@ -172,6 +172,18 @@ class DetectionTest(unittest.TestCase):
                     self.assertIn(signal["rulepack"], packs)
                     self.assertTrue(signal["path"])
 
+    def test_editor_settings_dir_does_not_select_config_dsl(self):
+        # urlPatterns in .vscode/settings.json is an editor setting, not a DSL.
+        with tempfile.TemporaryDirectory() as d:
+            vscode = Path(d) / ".vscode"
+            vscode.mkdir()
+            (vscode / "settings.json").write_text(
+                json.dumps({"urlPatterns": ["https://example.test"]}), encoding="utf-8"
+            )
+            result = select_rulepacks(d)
+            self.assertEqual(result["selected"], [])
+            self.assertEqual(result["signals"], [])
+
     def test_cli_detection_matches_function_and_is_deterministic(self):
         proc = subprocess.run(
             [sys.executable, str(SCRIPTS / "kuron_policy.py"),

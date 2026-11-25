@@ -59,6 +59,19 @@ class CliEntrypointsTest(unittest.TestCase):
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertIn("label", json.loads(proc.stdout))
 
+    def test_capabilities_probe_accepts_json_flag(self):
+        # The runbook spells "probe --json"; JSON is the default output, but
+        # the flag must not be rejected by argparse.
+        with tempfile.TemporaryDirectory() as d:
+            caps = Path(d) / "caps.json"
+            proc = run(
+                "kuron_capabilities.py", "probe", "--json", d, str(caps),
+                "--harness", "codex",
+            )
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertEqual(json.loads(proc.stdout)["harness"], "codex")
+            self.assertTrue(json.loads(caps.read_text(encoding="utf-8")))
+
     def test_policy_validate_check_attestation(self):
         policy = str(ROOT / "policy" / "kuron-policy.yml")
         for args in (

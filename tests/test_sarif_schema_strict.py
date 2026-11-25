@@ -73,8 +73,8 @@ def structural_errors(log: dict) -> list[str]:
     driver = (run.get("tool") or {}).get("driver") or {}
     if driver.get("name") != "Kuron Security":
         errors.append("driver.name missing")
-    if driver.get("semanticVersion") != "2.3.0":
-        errors.append("driver.semanticVersion must be 2.3.0")
+    if driver.get("semanticVersion") != "2.3.1":
+        errors.append("driver.semanticVersion must be 2.3.1")
     for result in run.get("results") or []:
         if not (result.get("message") or {}).get("text"):
             errors.append("result.message.text missing")
@@ -136,7 +136,7 @@ class SarifSchemaStrictTest(unittest.TestCase):
     def test_generated_sarif_has_all_phase_two_fields(self):
         log = self.log()
         result = log["runs"][0]["results"][0]
-        self.assertEqual(log["runs"][0]["tool"]["driver"]["semanticVersion"], "2.3.0")
+        self.assertEqual(log["runs"][0]["tool"]["driver"]["semanticVersion"], "2.3.1")
         self.assertEqual(len(result["codeFlows"][0]["threadFlows"][0]["locations"]), 3)
         self.assertEqual(len(result["partialFingerprints"]), 1)
         self.assertTrue(result["fixes"][0]["artifactChanges"][0]["replacements"])
