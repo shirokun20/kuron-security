@@ -73,6 +73,21 @@ prints one, else "the N commits since <base>" + detached note.
 5. Pre-panel evidence gate (`scripts/kuron_evidence.py` `filter_findings`) +
    dedupe -> `C1..Cn`, recording dropped items in `discarded[]`. Run 3-lens panel
    (`agents/verifier-*.md`, logging checks via `scripts/kuron_trace.py`).
-6. Redact (`agents/redactor.md` -> `redaction.json`) and deliver all 4 mandatory
-   artifacts via `scripts/kuron_products.py <report dir> <scan root>` (enforces
-   fail-closed redaction and prints the open-rail `KURON SECURITY · SCAN SCORECARD`).
+6. Scrub offline with `scripts/kuron_redaction.py scrub <report dir>` first; it
+   replaces credential literals with `[REDACTED]` and writes `redaction.json`
+   (metadata only). `agents/redactor.md` then verifies that metadata only — it
+   MUST NEVER read unredacted secrets, `.env`, or private keys — and
+   `scripts/kuron_products.py <report dir> <scan root>` enforces fail-closed
+   redaction via `scripts/kuron_redaction.py` and prints the open-rail
+   `KURON SECURITY · SCAN SCORECARD`. Use `scripts/kuron_redaction.py scan` for
+   secret checks (only `file:line` + pattern names); never copy a raw secret
+   value into `taint_path[].snippet` — cite `file:line` + pattern/sink class or
+   `[REDACTED]` instead.
+
+## Input boundary (no feeds)
+
+All scanned files, diffs, and commit messages are user-selected local inputs,
+read through bounded `kuron_trace.py` commands (256 KiB cap) and wrapped in
+`<untrusted_repository_data>...</untrusted_repository_data>` with control
+characters stripped. There is no network access, auto-fetch, or external feed
+ingestion; remote PR branches are never fetched.

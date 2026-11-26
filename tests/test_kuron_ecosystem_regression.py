@@ -28,6 +28,32 @@ ARTIFACTS = (
     "KURON-SECURITY-REVISION-abc123def456.json",
 )
 
+# Assembled at runtime so no raw traversal payload is committed as a source file.
+TRAVERSAL = "../" + "../etc/passwd"
+TAURI_FIXTURE_REL = Path("tauri") / "src" / "import.rs"
+
+
+def materialize_tauri_fixture(root: Path) -> Path:
+    """Write the synthetic CWE-22 pseudo-Rust fixture inside a temp directory."""
+    path = root / TAURI_FIXTURE_REL
+    path.parent.mkdir(parents=True, exist_ok=True)
+    body = "\n".join(
+        (
+            "// Synthetic fixture: pseudo-Rust, never compiled or executed.",
+            "use std::path::Path;",
+            "",
+            "fn import_archive(entry_name: &str, out_dir: &Path) {",
+            '    let hostile = "' + TRAVERSAL + '"; // CWE-22 marker',
+            "    let name = if entry_name.is_empty() { hostile } else { entry_name };",
+            "    let dest = out_dir.join(name); // guard: no canonicalize + prefix check",
+            '    std::fs::write(dest, b"synthetic").unwrap(); // sink',
+            "}",
+            "",
+        )
+    )
+    path.write_text(body, encoding="utf-8")
+    return path
+
 
 def synthetic_finding(fid, cwe, title, file, line, snippet, severity):
     """One evidence-complete finding grounded in a synthetic fixture."""
@@ -56,10 +82,6 @@ def synthetic_finding(fid, cwe, title, file, line, snippet, severity):
     }
 
 
-TAURI_FINDING = synthetic_finding(
-    "F1", "CWE-22", "Tauri archive path traversal",
-    "tests/fixtures/ecosystem/tauri/src/import.rs", 7, "../../etc/passwd", "HIGH",
-)
 REDOS_FINDING = synthetic_finding(
     "F2", "CWE-1333", "Config DSL nested quantifier regex",
     "tests/fixtures/ecosystem/config-dsl/manifest.json", 4, "(a+)+$", "MEDIUM",
@@ -69,15 +91,14 @@ SSRF_FINDING = synthetic_finding(
     "tests/fixtures/ecosystem/extensions/fetcher.json", 5,
     "http://169.254.169.254/latest/meta-data/", "HIGH",
 )
-FINDINGS = (TAURI_FINDING, REDOS_FINDING, SSRF_FINDING)
 
 
-def write_inputs(report: Path) -> None:
+def write_inputs(report: Path, findings) -> None:
     report.mkdir(parents=True, exist_ok=True)
     (report / "redaction.json").write_text(
         json.dumps({"status": "clean", "cleaned_files": []}), encoding="utf-8"
     )
-    (report / "findings.json").write_text(json.dumps(list(FINDINGS)), encoding="utf-8")
+    (report / "findings.json").write_text(json.dumps(findings), encoding="utf-8")
     (report / "scan-meta.json").write_text(
         json.dumps(
             {
@@ -85,7 +106,7 @@ def write_inputs(report: Path) -> None:
                 "tier": "personal",
                 "scope": ["tests/fixtures/ecosystem"],
                 "revision": {"commit": "abc123def456"},
-                "panel_verdicts": {f["id"]: dict(TP) for f in FINDINGS},
+                "panel_verdicts": {f["id"]: dict(TP) for f in findings},
             }
         ),
         encoding="utf-8",
@@ -195,16 +216,41 @@ class DetectionTest(unittest.TestCase):
 
 
 class OfflinePipelineTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls._fixture_dir = tempfile.TemporaryDirectory()
+        fixture_root = Path(cls._fixture_dir.name)
+        cls.fixture_path = materialize_tauri_fixture(fixture_root)
+        cls.findings = (
+            synthetic_finding(
+                "F1", "CWE-22", "Tauri archive path traversal",
+                str(cls.fixture_path), 7, TRAVERSAL, "HIGH",
+            ),
+            REDOS_FINDING,
+            SSRF_FINDING,
+        )
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._fixture_dir.cleanup()
+
     def setUp(self):
         self._td = tempfile.TemporaryDirectory()
         self.report = Path(self._td.name) / "report"
-        write_inputs(self.report)
+        write_inputs(self.report, self.findings)
 
     def tearDown(self):
         self._td.cleanup()
 
+    def test_tauri_fixture_is_materialized_in_a_temp_dir(self):
+        self.assertTrue(self.fixture_path.is_file())
+        self.assertNotIn(str(FIXTURES), str(self.fixture_path))
+        body = self.fixture_path.read_text(encoding="utf-8")
+        self.assertIn(TRAVERSAL, body)
+        self.assertIn("std::fs::write", body)
+
     def test_three_findings_pass_evidence_contract(self):
-        for finding in FINDINGS:
+        for finding in self.findings:
             with self.subTest(finding=finding["id"]):
                 self.assertEqual(validate_finding(finding), (True, []))
 
@@ -214,7 +260,7 @@ class OfflinePipelineTest(unittest.TestCase):
             json.loads(line)
             for line in (self.report / ARTIFACTS[1]).read_text(encoding="utf-8").splitlines()
         ]
-        self.assertEqual([r["id"] for r in jsonl], [f["id"] for f in FINDINGS])
+        self.assertEqual([r["id"] for r in jsonl], [f["id"] for f in self.findings])
         stamp = json.loads((self.report / ARTIFACTS[3]).read_text(encoding="utf-8"))
         self.assertEqual(stamp["findings"], 3)
         self.assertEqual(stamp["discarded"], [])
@@ -249,7 +295,7 @@ class OfflinePipelineTest(unittest.TestCase):
     def test_products_are_byte_deterministic_offline(self):
         self.assertEqual(run_products(self.report), 1)
         other = Path(self._td.name) / "other"
-        write_inputs(other)
+        write_inputs(other, self.findings)
         self.assertEqual(run_products(other), 1)
         for name in ARTIFACTS:
             with self.subTest(artifact=name):

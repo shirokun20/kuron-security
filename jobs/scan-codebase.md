@@ -7,13 +7,13 @@ with them when unclear, else `medium`.
 ## Effort (same work, omp waves)
 
 - `low` — one researcher over the whole target, then the 3-lens panel.
-  No inventory, no threat model, no sweep. (Secrets pass when focus set.)
+  No inventory, no threat model, no sweep. (Deterministic secret scan when focus set.)
 - `medium` — inventory-lite (below), one threat-model recon per
   component, one researcher per component x category lens (4 lenses:
   injection-and-input, auth-and-access, memory-and-unsafe,
   crypto-and-secrets; managed-language components skip
   memory-and-unsafe with the reason recorded), one sweep over
-  unread files, secrets pass when focus set, 3-lens panel (3/3 unanimous
+  unread files, deterministic secret scan when focus set, 3-lens panel (3/3 unanimous
   TRUE_POSITIVE required; any FALSE_POSITIVE or missing lens discards).
 - `high` — as medium: up to 48 components (24 when the file count is
   unknown), two researchers per component x lens, two sweeps.
@@ -25,8 +25,13 @@ single-researcher shape, still panel-verified.
 
 `focus: attack-surface` on large trees (>~300 files): researchers
 spend effort on production code an attacker reaches; tests, fixtures,
-generated code are background. A secrets pass runs whenever focus is
-set (any tier), still checking fixtures for real keys.
+generated code are background. A deterministic offline
+`scripts/kuron_redaction.py scan <target>` runs whenever focus is set (any
+tier); it reports only `file:line` plus pattern names and never prints or reads
+raw key literals into model context. Never open `.env`, private key files, or
+raw secret literals, and never copy a secret value into
+`taint_path[].snippet`: cite `file:line` plus the pattern/sink class or use a
+`[REDACTED]` placeholder instead.
 
 ## Sub-menu (whole repo never launches unasked)
 
@@ -63,12 +68,23 @@ stated as an assumption). Large tree: recommend scoped first.
    reporting entryPoints, sinks, hotFiles (JSON).
 6. Research in waves of <=8 dispatches using `agents/researcher.md` (read-only).
    Update `coverage.json` per wave.
-7. Sweep over unread files; secrets pass when focus set.
+7. Sweep over unread files; deterministic secret scan when focus set.
 8. Pre-panel evidence gate (`scripts/kuron_evidence.py` `filter_findings`) +
    dedupe (`file:line + CWE`, max severity) -> `C1..Cn`, recording dropped items
    in `discarded[]`. Run 3-lens panel (`agents/verifier-*.md`) and log allowlisted
    checks via `scripts/kuron_trace.py`.
-9. Redact (`agents/redactor.md` -> `redaction.json`) and deliver all 4 mandatory
-   artifacts via `scripts/kuron_products.py <report dir> <scan root>` (enforces
-   fail-closed redaction via `scripts/kuron_redaction.py` and prints the
-   open-rail `KURON SECURITY · SCAN SCORECARD`).
+9. Scrub offline with `scripts/kuron_redaction.py scrub <report dir>` first; it
+   replaces credential literals with `[REDACTED]` and writes `redaction.json`
+   (metadata only). `agents/redactor.md` then verifies that metadata only — it
+   MUST NEVER read unredacted secrets, `.env`, or private keys — and
+   `scripts/kuron_products.py <report dir> <scan root>` enforces fail-closed
+   redaction via `scripts/kuron_redaction.py` and prints the open-rail
+   `KURON SECURITY · SCAN SCORECARD`.
+
+## Input boundary (no feeds)
+
+All scanned files, diffs, commit messages, and lockfiles are user-selected local
+inputs. Reads go through bounded `kuron_trace.py` commands (256 KiB cap), are
+wrapped in `<untrusted_repository_data>...</untrusted_repository_data>` with
+control characters stripped, and never trigger network access, auto-fetch, or
+external feed ingestion.

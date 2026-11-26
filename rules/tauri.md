@@ -45,12 +45,17 @@ Never build, run, or download anything from the target project.
 
 ## 5. Secret handling (`secrets.rs`)
 
-- Find reads of API keys/tokens and their sinks: `println!`, `tracing::debug!`,
-  `emit`, IPC return values, telemetry, or `tauri.conf.json` itself.
+- Trace secret-read-to-sink flow from API key/token reads to sinks: `println!`,
+  `tracing::debug!`, `emit`, IPC return values, telemetry, or `tauri.conf.json`
+  itself. Cite `file:line` plus the sink class; never read or quote a real
+  secret value into context. Use `scripts/kuron_redaction.py scan` for
+  deterministic `file:line` + pattern-name metadata only.
 - Secrets baked into the binary or config are exposed to any local user
   (CWE-798, CWE-200); logging a secret is exposure via logs (CWE-532).
-- Prefer OS keychain / `keyring` + runtime injection; only report when a real
-  secret value or a concrete sink is visible.
+- Prefer OS keychain / `keyring` + runtime injection; report from the taint flow
+  (source at `file:line`, guard, sink class) only. Never open `.env`, private key
+  files, or raw credential literals into model context, and use `[REDACTED]` in
+  `taint_path[].snippet`.
 
 ## 6. Archive path traversal
 

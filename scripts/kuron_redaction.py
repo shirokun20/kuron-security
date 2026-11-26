@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Fail-closed redaction gate for Kuron Security v2."""
+"""Fail-closed redaction gate for Kuron Security v2.
+
+Secret handling here is deterministic Python stdlib work. Raw credential
+literals are never returned, printed, or sent to a model: callers receive only
+pattern names, file paths, and line numbers.
+"""
 
 from __future__ import annotations
 
@@ -38,10 +43,153 @@ SECRET_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ),
 )
 
+# Bounded resource limits for every on-disk operation in this module.
+MAX_READ_BYTES = 256 * 1024
+MAX_SCAN_FILES = 256
+REDACTION_MARKER = "[REDACTED]"
+ARTIFACT_SUFFIXES = (".md", ".json", ".jsonl", ".sarif", ".patch", ".txt")
+
 
 def scan_secrets(text: str) -> list[str]:
     """Return the names of secret patterns found in ``text`` (empty means clean)."""
     return [name for name, pattern in SECRET_PATTERNS if pattern.search(text)]
+
+
+def redact_text(text: str) -> tuple[str, list[str]]:
+    """Replace secret matches with ``[REDACTED]`` and list the matched names.
+
+    The returned names are deduplicated and ordered by first match position; the
+    raw matched value is never included in either return value.
+    """
+    if not isinstance(text, str):
+        raise TypeError("redact_text expects str")
+    matches: list[tuple[int, int, int, str]] = []
+    for position, (name, pattern) in enumerate(SECRET_PATTERNS):
+        for match in pattern.finditer(text):
+            matches.append((match.start(), match.end(), position, name))
+    if not matches:
+        return text, []
+
+    first_seen: dict[str, int] = {}
+    for start, _end, position, name in sorted(matches, key=lambda m: (m[0], m[2])):
+        first_seen.setdefault(name, start)
+    names = [name for name, _ in sorted(first_seen.items(), key=lambda item: (item[1], item[0]))]
+
+    # Merge overlapping matches so no part of a credential survives redaction.
+    merged: list[list[int]] = []
+    for start, end, _position, _name in sorted(matches, key=lambda m: (m[0], m[1])):
+        if merged and start <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], end)
+        else:
+            merged.append([start, end])
+
+    pieces: list[str] = []
+    cursor = 0
+    for start, end in merged:
+        pieces.append(text[cursor:start])
+        pieces.append(REDACTION_MARKER)
+        cursor = end
+    pieces.append(text[cursor:])
+    return "".join(pieces), names
+
+
+def _read_bounded(path: Path) -> tuple[str, bool]:
+    """Read at most ``MAX_READ_BYTES`` bytes via a context manager.
+
+    Returns ``(text, truncated)``; decoding is replace-only so binary content
+    cannot raise or leak raw bytes into model context.
+    """
+    with path.open("rb") as handle:
+        raw = handle.read(MAX_READ_BYTES + 1)
+    truncated = len(raw) > MAX_READ_BYTES
+    return raw[:MAX_READ_BYTES].decode("utf-8", errors="replace"), truncated
+
+
+def _report_files(base: Path, artifacts: list[str] | None) -> tuple[list[Path], bool]:
+    """Resolve the artifact list deterministically with a hard file-count cap."""
+    if artifacts is None:
+        candidates = sorted(
+            p for p in base.iterdir()
+            if p.is_file() and p.name != "redaction.json" and p.suffix in ARTIFACT_SUFFIXES
+        )
+    else:
+        candidates = sorted((base / name for name in artifacts), key=str)
+    truncated = len(candidates) > MAX_SCAN_FILES
+    return candidates[:MAX_SCAN_FILES], truncated
+
+
+def redact_report(report_dir: str, artifacts: list[str] | None = None) -> dict:
+    """Scrub report artifacts offline and write deterministic ``redaction.json``.
+
+    Only status, cleaned file names, and matched pattern metadata are recorded;
+    no raw credential value is written to disk or returned to the caller.
+    """
+    base = Path(report_dir)
+    base.mkdir(parents=True, exist_ok=True)
+    files, walk_truncated = _report_files(base, artifacts)
+    cleaned: list[str] = []
+    matches: list[dict] = []
+    truncated_files: list[str] = []
+    unresolved_files: list[str] = []
+    missing_files: list[str] = []
+
+    for path in files:
+        if not path.is_file():
+            missing_files.append(path.name)
+            continue
+        text, truncated = _read_bounded(path)
+        if truncated:
+            # Never write a partial file back: fail closed instead.
+            truncated_files.append(path.name)
+            continue
+        scrubbed, names = redact_text(text)
+        if "not cleaned:" in text:
+            unresolved_files.append(path.name)
+        with path.open("w", encoding="utf-8") as handle:
+            handle.write(scrubbed)
+        cleaned.append(path.name)
+        if names:
+            matches.append({"file": path.name, "patterns": names})
+
+    status = "clean" if not (
+        truncated_files or unresolved_files or missing_files or walk_truncated
+    ) else "not_cleaned"
+    payload = {
+        "status": status,
+        "cleaned_files": sorted(cleaned),
+        "matches": matches,
+        "missing_files": sorted(missing_files),
+        "truncated_files": sorted(truncated_files),
+        "unresolved_files": sorted(unresolved_files),
+        "walk_truncated": walk_truncated,
+    }
+    (base / "redaction.json").write_text(
+        json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+    )
+    return payload
+
+
+def scan_target(target: str) -> list[dict]:
+    """Scan a file or directory, returning only ``file``, ``line``, and pattern names."""
+    root = Path(target)
+    if root.is_dir():
+        found = sorted(p for p in root.rglob("*") if p.is_file())
+        files = found[:MAX_SCAN_FILES]
+        display = lambda p: str(p.relative_to(root))
+    elif root.is_file():
+        files = [root]
+        display = lambda p: p.name
+    else:
+        raise RedactionError(f"scan target does not exist: {root}")
+
+    records: list[dict] = []
+    for path in files:
+        text, _truncated = _read_bounded(path)
+        for line_number, line in enumerate(text.splitlines(), start=1):
+            names = scan_secrets(line)
+            if names:
+                records.append({"file": display(path), "line": line_number, "patterns": names})
+    return records
 
 
 def verdict(report_dir: str) -> dict:
@@ -80,9 +228,15 @@ def enforce(report_dir: str, artifacts: list[str]) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Kuron Security redaction gate")
     sub = parser.add_subparsers(dest="command", required=True)
-    s = sub.add_parser("scan", help="list secret pattern names found in text or a file")
+    s = sub.add_parser(
+        "scan", help="scan a file or directory; emit file:line + pattern names only"
+    )
     s.add_argument("path", nargs="?")
-    s.add_argument("--text")
+    s.add_argument("--text", help="scan inline text (legacy, emits pattern names only)")
+    sc = sub.add_parser(
+        "scrub", help="scrub report artifacts offline and write redaction.json"
+    )
+    sc.add_argument("report_dir")
     e = sub.add_parser("enforce", help="fail closed on an unredacted report")
     e.add_argument("report_dir")
     e.add_argument("artifacts", nargs="*")
@@ -96,11 +250,12 @@ def main(argv: list[str] | None = None) -> int:
             if (args.path is None) == (args.text is None):
                 print("error: provide exactly one of path or --text", file=sys.stderr)
                 return 2
-            text = (
-                args.text if args.text is not None
-                else Path(args.path).read_text(encoding="utf-8", errors="replace")
-            )
-            result = scan_secrets(text)
+            if args.text is not None:
+                result: dict | list = scan_secrets(args.text)
+            else:
+                result = scan_target(args.path)
+        elif args.command == "scrub":
+            result = redact_report(args.report_dir)
         else:
             enforce(args.report_dir, args.artifacts)
             result = {"ok": True}
@@ -108,6 +263,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(result, sort_keys=True))
+    if args.command == "scrub" and result["status"] != "clean":
+        return 1
     return 0
 
 

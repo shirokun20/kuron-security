@@ -6,7 +6,7 @@
       "tool": {
         "driver": {
           "name": "Kuron Security",
-          "semanticVersion": "2.3.1",
+          "semanticVersion": "2.3.2",
           "rules": [
             {
               "id": "CWE-200",

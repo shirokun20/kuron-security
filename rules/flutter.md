@@ -29,9 +29,14 @@ these checks. Never run the app, an emulator, or package manager scripts.
   without platform options as sensitive sinks (CWE-922, CWE-311).
 - Check `flutter_secure_storage` options: Keychain accessibility and
   `EncryptedSharedPreferences` / Keystore must not be downgraded to plaintext;
-  no secrets in `debugPrint`, logs, or analytics payloads (CWE-532).
+  no secrets in `debugPrint`, logs, or analytics payloads (CWE-532). Rely on
+  secret-read-to-sink taint flow: cite `file:line` plus the sink class, never
+  read or quote real secret values into context.
 - A finding needs a concrete secret read/write and a concrete weaker sink;
-  a plain dependency listing alone is not a finding.
+  a plain dependency listing alone is not a finding. Use
+  `scripts/kuron_redaction.py scan` (only `file:line` + pattern names), never
+  open `.env` or private key files, and put `[REDACTED]` in
+  `taint_path[].snippet`.
 
 ## 4. WebView JS bridges
 

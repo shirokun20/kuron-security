@@ -12,7 +12,7 @@
 
 **Evidence-first code security audits for AI coding agents.** Kuron Security turns read-only code evidence into a **3/3 unanimous `TRUE_POSITIVE`** verdict, an ASCII open-rail scorecard, a `source -> guard -> sink` advisory card, and SARIF 2.1.0 — with no proprietary `Workflow` tool required.
 
-[![Kuron Security v2.3.1 demo](docs/assets/demo.gif)](docs/assets/demo-poster.png)
+[![Kuron Security v2.3.2 demo](docs/assets/demo.gif)](docs/assets/demo-poster.png)
 
 GIF blocked? Use the [static poster (`demo-poster.png`)](docs/assets/demo-poster.png). Share card: [`social-preview.png`](docs/assets/social-preview.png). The clip is a deterministic render of a real scan of a **public, already-patched historical CVE** (details below).
 
@@ -35,7 +35,7 @@ GIF blocked? Use the [static poster (`demo-poster.png`)](docs/assets/demo-poster
 
 ## Why Kuron Security vs. a generic `"audit my code"` prompt?
 
-| Capability | Generic AI prompt | Proprietary-workflow plugin | 🛡️ **Kuron Security (`v2.3.1`)** |
+| Capability | Generic AI prompt | Proprietary-workflow plugin | 🛡️ **Kuron Security (`v2.3.2`)** |
 |---|---|---|---|
 | **Harnesses supported** | Any chat | Claude Code with the internal `Workflow` tool only | **Antigravity · omp · OpenCode · Codex · Claude Code · Cursor · Cline · Copilot CLI** |
 | **False-positive filtering** | ❌ Single LLM guess | ✅ 3-lens verifier panel | ✅ **3-lens adversarial panel (`R` · `I` · `D`), 3/3 unanimous to keep** |
@@ -46,7 +46,7 @@ GIF blocked? Use the [static poster (`demo-poster.png`)](docs/assets/demo-poster
 
 ---
 
-## Operating Tiers & Honest Provenance Labels (`v2.3.1`)
+## Operating Tiers & Honest Provenance Labels (`v2.3.2`)
 
 | Tier | Effort & shape | Isolation | Artifacts & review |
 |---|---|---|---|

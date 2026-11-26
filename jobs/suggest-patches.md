@@ -74,10 +74,14 @@ ONLY acted-on value is an id matching `^F[0-9]{1,9}$`, else literal
 4. Verify + challenge (`agents/patch-verifier.md`, read-only): check evidence
    contract, staged diff, and record `untested` / `tests_run` honestly.
 5. Judge: objection -> one revision round; second objection declines.
-6. Redact (`agents/redactor.md` -> `redaction.json`) and render via
-   `scripts/kuron_patch.py render <patch dir> <report dir>/patches/ <repo root>
+6. Scrub offline with `scripts/kuron_redaction.py scrub <patch dir>` first; it
+   writes `redaction.json` (metadata only). `agents/redactor.md` then verifies
+   that metadata only and MUST NEVER read unredacted secrets, `.env`, or private
+   keys. Render via `scripts/kuron_patch.py render <patch dir> <report dir>/patches/ <repo root>
    --base <PATCH BASE>` (legacy `--render` still works; gates on evidence, stamps honest label + `untested`
-   when tests did not run, and enforces fail-closed redaction).
+   when tests did not run, and enforces fail-closed redaction via
+   `scripts/kuron_redaction.py`). Never copy a raw secret value into a patch or
+   finding snippet — cite `file:line` + sink class or use `[REDACTED]`.
 
 ## Report to the user
 

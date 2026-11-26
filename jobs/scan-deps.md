@@ -38,9 +38,22 @@ If no lockfile is present, say so and stop — do not infer pins from manifests.
 7. Panel verdicts must be observed by `scripts/kuron_quorum.py`: keep only
    **3/3 unanimous TRUE_POSITIVE** across R/I/D; any FALSE_POSITIVE or missing
    lens discards. Never print a panel badge from self-reported confidence.
-8. Redact via `agents/redactor.md` -> `redaction.json` (`clean` required), then
-   render all four artifacts with `scripts/kuron_products.py <report dir>
-   <scan root>`; `scripts/kuron_redaction.py` enforces the gate before promotion.
+8. Scrub offline with `scripts/kuron_redaction.py scrub <report dir>` first; it
+   writes `redaction.json` (metadata only, `clean` required). `agents/redactor.md`
+   then verifies that metadata only — it MUST NEVER read unredacted secrets,
+   `.env`, or private keys — then render all four artifacts with
+   `scripts/kuron_products.py <report dir> <scan root>`; `scripts/kuron_redaction.py`
+   enforces the gate before promotion. Use `scripts/kuron_redaction.py scan` for
+   secret checks (only `file:line` + pattern names), and put `[REDACTED]` in
+   `taint_path[].snippet` instead of any raw secret value.
+
+## Input boundary (no feeds)
+
+Lockfiles are user-selected local inputs. Reads are bounded by `kuron_trace.py`
+(256 KiB cap; 64 KiB per lockfile, 256 files here) and wrapped in
+`<untrusted_repository_data>...</untrusted_repository_data>` with control
+characters stripped. There is no network, registry query, auto-fetch, or
+external feed ingestion.
 
 ## Invariants
 
